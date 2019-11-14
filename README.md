@@ -2,7 +2,7 @@
 
 This repo manages most of my dotfiles. GNU `stow` is used to manage the symlinks and installation.
 
-These instructions assume you are on a mac (only tested on high sierra) and have iterm2 installed.
+Thanks to the original project (https://github.com/Nathan-Schwartz/dotfiles.git)
 
 
 ### Getting started
