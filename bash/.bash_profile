@@ -137,7 +137,7 @@ if [ -a ~/.env ]; then
 fi
 
 # Put readline in vi mode
-#set -o vi
+# set -o vi
 
 #
 # Exports
