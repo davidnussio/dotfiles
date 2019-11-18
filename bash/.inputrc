@@ -43,3 +43,6 @@ set convert-meta off
 set bell-style none
 
 # set keymap vi
+
+# Macros
+"\es":"\C-a sudo \C-e\C-m"
