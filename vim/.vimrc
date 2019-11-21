@@ -464,6 +464,11 @@ set guicursor=a:blinkon0
 "   autocmd WinLeave,FocusLost   * setlocal nocursorline
 " augroup END
 
+augroup resCur
+  autocmd!
+  autocmd BufReadPost * call setpos(".", getpos("'\""))
+augroup END
+
 " ---------- Spaces and Tabs ---------- {{{1
 " Remove trailing whitespace on save
 augroup RemoveTrailingWhitespaceGroup

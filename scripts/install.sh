@@ -39,5 +39,5 @@ n prune
 
 # Install some global packages
 printf "\n>> Install global npm packages\n"
-npm i -g yarn nodemon flow-bin eslint babel-eslint eslint-plugin-flowtype jest flow-language-server prettier
+npm i -g yarn nodemon npm-check eslint babel-eslint eslint-plugin-flowtype jest prettier
 
