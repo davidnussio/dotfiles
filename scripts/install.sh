@@ -15,7 +15,7 @@ printf "\n>> Install apt packages\n"
 sudo apt install bash bash-completion git \
 stow vim tmux tree docker docker-compose jq httpie \
 build-essential cmake python3-dev \
-htop
+htop fzf
 
 git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles
 pushd ~/dotfiles/vim/.vim/bundle/YouCompleteMe
