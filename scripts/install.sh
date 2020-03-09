@@ -3,6 +3,8 @@
 # Ask for the administrator password upfront
 sudo -v
 
+sudo apt update && sudo apt full-upgrade
+
 # Check for brew and install it if missing
 if test ! $(which brew)
 then
@@ -26,6 +28,19 @@ popd
 printf "\n>> Install n\n"
 # -y automates installation, -n avoids modifying bash_profile
 curl -L https://git.io/n-install | bash -s -- -n -y
+
+# Google cloud
+echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+sudo apt install apt-transport-https ca-certificates gnupg
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+sudo apt update && sudo apt install -y google-cloud-sdk
+
+# Install DBeaver
+sudo add-apt-repository ppa:serge-rider/dbeaver-ce
+sudo apt-get update
+sudo apt-get install -y dbeaver-ce
+
+
 
 # n requires resourcing or reloading before first use
 source ~/.bash_profile
