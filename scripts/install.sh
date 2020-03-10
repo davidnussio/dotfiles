@@ -9,7 +9,7 @@ sudo apt update && sudo apt full-upgrade
 if test ! $(which brew)
 then
   printf "\n>> Installing Linuxbrew...\n"
-  sudo apt-get install -y build-essential curl file git python-setuptools
+  sudo apt install -y build-essential curl file git python-setuptools
   yes | sh -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
 fi
 
@@ -38,14 +38,16 @@ sudo apt update && sudo apt install -y google-cloud-sdk
 # Google Chrome Beta
 curl https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key --keyring /usr/share/keyrings/google.gpg add -
 echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list.d/google-chrome-beta.list
+sudo apt update
+sudo apt install -y google-chrome-beta
 
 # VPN
 sudo apt install openconnect network-manager-openconnect network-manager-openconnect-gnome
 
 # Install DBeaver
 sudo add-apt-repository ppa:serge-rider/dbeaver-ce
-sudo apt-get update
-sudo apt-get install -y dbeaver-ce
+sudo apt update
+sudo apt install -y dbeaver-ce
 
 
 
