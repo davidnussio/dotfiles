@@ -35,6 +35,12 @@ sudo apt install apt-transport-https ca-certificates gnupg
 curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
 sudo apt update && sudo apt install -y google-cloud-sdk
 
+# Google Chrome Beta
+echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list.d/google-chrome-beta.list
+
+# VPN
+sudo apt install openconnect network-manager-openconnect network-manager-openconnect-gnome
+
 # Install DBeaver
 sudo add-apt-repository ppa:serge-rider/dbeaver-ce
 sudo apt-get update
