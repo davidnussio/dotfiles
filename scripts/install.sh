@@ -9,12 +9,12 @@ sudo apt update && sudo apt full-upgrade
 if test ! $(which brew)
 then
   printf "\n>> Installing Linuxbrew...\n"
-  sudo apt-get install build-essential curl file git python-setuptools
+  sudo apt-get install -y build-essential curl file git python-setuptools
   yes | sh -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
 fi
 
 printf "\n>> Install apt packages\n"
-sudo apt install bash bash-completion git \
+sudo apt install -y bash bash-completion git \
 stow vim tmux tree docker docker-compose jq httpie \
 build-essential cmake python3-dev \
 htop fzf
@@ -36,6 +36,7 @@ curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyr
 sudo apt update && sudo apt install -y google-cloud-sdk
 
 # Google Chrome Beta
+curl https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key --keyring /usr/share/keyrings/google.gpg add -
 echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list.d/google-chrome-beta.list
 
 # VPN
