@@ -17,7 +17,7 @@ printf "\n>> Install apt packages\n"
 sudo apt install -y bash bash-completion git \
 stow vim tmux tree docker docker-compose jq httpie \
 build-essential cmake python3-dev \
-htop fzf
+htop fzf gnome-tweak-tool silversearcher-ag
 
 git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles
 pushd ~/dotfiles/vim/.vim/bundle/YouCompleteMe
@@ -41,14 +41,19 @@ echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sud
 sudo apt update
 sudo apt install -y google-chrome-beta
 
+# VS Code
+curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key --keyring /usr/share/keyrings/packages.microsoft.gpg add -
+sudo sh -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list'
+sudo apt update
+sudo apt install -y code
+
 # VPN
 sudo apt install openconnect network-manager-openconnect network-manager-openconnect-gnome
 
 # Install DBeaver
-sudo add-apt-repository ppa:serge-rider/dbeaver-ce
-sudo apt update
-sudo apt install -y dbeaver-ce
-
+curl https://dbeaver.io/debs/dbeaver.gpg.key | sudo apt-key add -
+echo "deb https://dbeaver.io/debs/dbeaver-ce /" | sudo tee /etc/apt/sources.list.d/dbeaver.list
+sudo apt-get update && sudo apt-get install dbeaver-ce
 
 
 # n requires resourcing or reloading before first use

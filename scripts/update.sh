@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 printf "\n>> Debian updates\n"
-sudo apt-get update
-sudo apt-get upgrade -y
+sudo apt update
+sudo apt upgrade -y
 
 printf "\n>> n update\n"
 n-update -y

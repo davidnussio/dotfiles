@@ -9,7 +9,7 @@ Thanks to the original project (https://github.com/Nathan-Schwartz/dotfiles.git)
 To start using my dotfiles on a new computer run the following:
 ```bash
 # clone repo and all submodules to home directory
-git clone --recursive https://github.com/Nathan-Schwartz/dotfiles.git ~/dotfiles
+git clone --recursive https://github.com/davidnussio  Nathan-Schwartz/dotfiles.git ~/dotfiles
 
 cd ~/dotfiles
 
