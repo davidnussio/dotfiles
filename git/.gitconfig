@@ -1,9 +1,6 @@
 # Include user settings from a file in the home directory
-[user]
-	name = David Nussio
-	email = david.nussio@gmail.com
-[includeIf "gitdir:~/dev/eoc/"]
-    path = ~/.gitconfig.eoc
+[include]
+	path = ~/.gitconfig.local
 [color]
 	ui = auto
 [push]
@@ -15,30 +12,17 @@
 [commit]
   verbose = true
 [core]
-  editor = vim
-  excludesfile = ~/.gitignore_global
-  ignorecase = false
+	excludesfile = /home/david/.gitignore
+	editor = vim
+[merge]
+	tool = meld
+[push]
+	default = current
 [alias]
-  # Source of conflicts script: https://gist.github.com/jacobvosmaer/3187346
-  aliases = !git config --get-regexp 'alias.*' | colrm 1 6 | sed 's/[ ]/ = /' | sort
-  ca = commit --amend
-  cae = commit --amend --no-edit --no-verify
-  co = checkout
-  cob = checkout -b
-  conflicts = !git diff --name-only --diff-filter=U --relative -z | xargs -0
-  d = diff
-  exec = "!exec "
-  l = log --graph --pretty=format:'%Cred%h%Creset - %Cblue%an%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative
- 	lg = log --graph --abbrev-commit --decorate --date=relative --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
-  pushhard = push --no-verify -f
-  root = "!git rev-parse --show-toplevel"
-  git = "!git"
-  s = status
-  todo = commit --allow-empty --no-verify -m
-  wip = !git add -A && git commit
-  wtf = "! git log --pretty=tformat:\"%C(auto,yellow)%h%C(auto)%d%C(auto,reset) by %C(auto,blue)%cn%C(auto,reset), %C(auto,cyan)%ar%C(auto,reset)%n %s%n\" --stat"
-  cm = commit --no-verify -m
-# [diff]
-#   algorithm = patience
+	lg1 = log --graph --abbrev-commit --decorate --date=relative --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
+	lg2 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)' --all
+	lg = !"git lg1"
+	dsf = "!f() { [ -z \"$GIT_PREFIX\" ] || cd \"$GIT_PREFIX\" && git diff --color \"$@\" | diff-so-fancy  | less --tabs=4 -RFX; }; f"
+	ignore = "!gi() { curl -L -s https://www.gitignore.io/api/$@ ;}; gi"
 [gui]
 	editor = code

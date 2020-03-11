@@ -193,3 +193,5 @@ fi
 if [ -a ~/.bash_profile.local ]; then
   source ~/.bash_profile.local
 fi
+
+export PATH=${PATH}:${HOME}/bin
