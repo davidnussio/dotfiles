@@ -142,6 +142,11 @@ fi
 #
 # Exports
 #
+# QT HiDPI
+export QT_AUTO_SCREEN_SCALE_FACTOR_=1
+export QT_SCALE_FACTOR=1.2
+export QT_STYLE_OVERRIDE=Adwaita-Dark
+
 export NOTES_DIR="$HOME/notes"
 export PROJECTS_DIR="$HOME/projects"
 
@@ -149,6 +154,7 @@ export GIT_EDITOR=vim
 export EDITOR=vim
 
 # Highlight section titles in manual pages.
+export LESS="-R"
 export LESS_TERMCAP_md="${yellow}";
 
 # Prefer US English and use UTF-8.
@@ -166,6 +172,7 @@ export NODE_REPL_MODE='sloppy';
 export HISTSIZE='32768';
 export HISTFILESIZE="${HISTSIZE}";
 
+
 #
 # PATH extensions
 #
@@ -178,6 +185,8 @@ export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PR
 
 export REBEL_HOME=${HOME}/.jrebel
 export MAVEN_OPTS="-agentpath:$REBEL_HOME/lib/libjrebel64.so"
+
+[ -f "/usr/share/autojump/autojump.bash" ] && . /usr/share/autojump/autojump.bash
 
 function gitignore() { curl -sL https://www.gitignore.io/api/$@ ;}
 

@@ -19,7 +19,9 @@ printf "\n>> Install apt packages\n"
 sudo apt install -y bash bash-completion git \
 stow vim tmux tree docker docker-compose jq httpie \
 build-essential cmake python3-dev \
-htop fzf gnome-tweak-tool silversearcher-ag maven snap
+htop fzf gnome-tweak-tool silversearcher-ag \
+openjdk-8-jdk-headless maven snap \
+adwaita-qt autojump
 
 git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles
 pushd ~/dotfiles/vim/.vim/bundle/YouCompleteMe

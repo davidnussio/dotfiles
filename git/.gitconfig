@@ -1,8 +1,10 @@
 # Include user settings from a file in the home directory
 [include]
-	path = ~/.gitconfig.local
+  path = ~/.gitconfig.local
+[includeIf "gitdir:~/dev/eoc/"]
+  path = ~/dev/eoc/.gitconfig.eoc
 [color]
-	ui = auto
+  ui = auto
 [push]
   default = simple
 [merge]
