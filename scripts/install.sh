@@ -13,7 +13,9 @@ then
   yes | sh -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
 fi
 
-
+# Configure watches
+echo "fs.inotify.max_user_watches=524288" | sudo tee /etc/sysctl.conf
+sudo sysctl -p
 
 printf "\n>> Install apt packages\n"
 sudo apt install -y bash bash-completion git \
@@ -21,7 +23,8 @@ stow vim tmux tree docker docker-compose jq httpie \
 build-essential cmake python3-dev \
 htop fzf gnome-tweak-tool silversearcher-ag \
 openjdk-8-jdk-headless maven snap \
-adwaita-qt autojump
+adwaita-qt autojump \
+qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
 
 git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles
 pushd ~/dotfiles/vim/.vim/bundle/YouCompleteMe
@@ -47,6 +50,9 @@ sudo apt install -y google-chrome-beta
 
 # VS Code
 sudo snap install code --classic
+
+# Android
+snap install android-studio --classic
 
 # Install DBeaver
 sudo snap install dbeaver-ce
