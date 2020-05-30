@@ -14,10 +14,10 @@ set show-all-if-ambiguous on
 set match-hidden-files on
 
 # Show all autocomplete results at once
-set page-completions on
+set page-completions off
 
 # If there are more than 200 possible completions for a word, ask to show them all
-set completion-query-items 200
+set completion-query-items 350
 
 # Show extra file information when completing, like `ls -F` does
 set visible-stats on

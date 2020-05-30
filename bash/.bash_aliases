@@ -80,3 +80,6 @@ alias sudo='sudo '
 
 # Open something
 alias o=xdg-open
+
+# Code insiders
+alias code=code-insiders
