@@ -76,7 +76,7 @@ alias reload="exec ${SHELL} -l"
 alias update='bash ~/dotfiles/scripts/update.sh'
 
 # Enable aliases to be sudo’ed
-alias sudo='sudo '
+# alias sudo='sudo '
 
 # Open something
 alias o=xdg-open
