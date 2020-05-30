@@ -9,9 +9,19 @@ function reloadBashProfile() {
     source ~/.bash_profile
 }
 
+function dummySudo() {
+    $*
+}
+
+# Enable alias 
+shopt -s expand_aliases
+
+# Dummy sudo: working on machine without sudo command
+command -v sudo >/dev/null 2>&1 || { echo "install"; alias sudo='dummySudo'; }
+
 # Ask for the administrator password upfront
 printf "👑 Electing user\n"
-sudo -v
+sudo -v 2>&1 /dev/null
 
 printf "🔄 Updating system\n"
 sudo apt update &>>$LOGFILE && sudo apt full-upgrade &>>$LOGFILE
@@ -46,7 +56,7 @@ printf "📦 Stow dotfiles: bash git\n"
 stow bash git
 
 # Source bash profile
-reloadBashProfile()
+reloadBashProfile
 
 # Install spaceVim
 printf "📦 Install spaceVim\n"
