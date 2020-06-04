@@ -1,6 +1,6 @@
 #!/bin/bash -i
 
-[[ $- != *i* ]] && { printf "🔥 Rerun in interactive mode: $ bash -i ./install.sh"; exit 1; }
+[[ $- != *i* ]] && { printf "🔥 Rerun in interactive mode: $ bash -i ./install.sh\n"; exit 1; }
 
 INSTALL_DEV_GUI_TOOLS=n
 LOGFILE=install.log
@@ -133,8 +133,9 @@ n prune &>> $LOGFILE
 
 # Install some global packages
 printf "📦 Install global npm packages\n"
-npm i -g yarn nodemon npm-check moleculer-cli diff-so-fancy &>> $LOGFILE
+npm i -g yarn nodemon npm-check moleculer-cli diff-so-fancy jwt-cli &>> $LOGFILE
 
 # Print 
 printf "✅ All done! \n"
+printf "👀 installation logfile ${LOGFILE}"
 printf "🏁 🏃 $ source ~/.bashrc\n"
