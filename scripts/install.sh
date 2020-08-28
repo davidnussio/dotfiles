@@ -50,7 +50,7 @@ sudo apt install -y bash bash-completion git locales \
     htop fzf silversearcher-ag \
     openjdk-8-jdk-headless maven snapd autojump \
     qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils \
-    fonts-firacode inotify-tools \
+    fonts-firacode inotify-tools jpegoptim \
     apt-transport-https ca-certificates gnupg \
     &>> $LOGFILE
 

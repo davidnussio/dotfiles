@@ -35,14 +35,15 @@ set output-meta on
 set convert-meta off
 
 # Show vim mode in the prompt
-#set show-mode-in-prompt off
-#set vi-cmd-mode-string "\e[7;49;34m\ NORMAL \e[0;39;49m "
-#set vi-ins-mode-string "\e[7;49;32m\ INSERT \e[0;39;49m "
-#set keyseq-timeout 100
+set show-mode-in-prompt off
+set vi-cmd-mode-string "\e[7;49;34m\ N \e[0;39;49m "
+set vi-ins-mode-string "\e[7;49;32m\ I \e[0;39;49m "
+set keyseq-timeout 100
 
 set bell-style none
 
-# set keymap vi
+#set keymap vi
+#set editing-mode vi
 
 # Macros
-"\es":"\C-a sudo \C-e\C-m"
+"\es":"\e[5~\C-a sudo \C-e\C-m"

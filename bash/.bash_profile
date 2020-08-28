@@ -201,3 +201,4 @@ if [ -a ~/.bash_profile.local ]; then
 fi
 
 export PATH=${PATH}:${HOME}/bin
+eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
