@@ -171,12 +171,6 @@ export HISTFILESIZE="${HISTSIZE}";
 #
 # PATH extensions
 #
-# Added by n-install (see http://git.io/n-install-repo).
-export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"
-
-#
-# MISC
-#
 
 export REBEL_HOME=${HOME}/.jrebel/jrebel
 export MAVEN_OPTS="-Xshare:off -agentpath:$REBEL_HOME/lib/libjrebel64.so"
@@ -200,5 +194,26 @@ if [ -a ~/.bash_profile.local ]; then
   source ~/.bash_profile.local
 fi
 
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/home/david/Programs/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/home/david/Programs/miniconda3/etc/profile.d/conda.sh" ]; then
+        . "/home/david/Programs/miniconda3/etc/profile.d/conda.sh"
+    else
+        export PATH="/home/david/Programs/miniconda3/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
+
 export PATH=${PATH}:${HOME}/bin
 eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
+
+export PATH="$HOME/.cargo/bin:$PATH"
+
+# Volta Path
+export VOLTA_HOME="$HOME/.volta"
+export PATH="$VOLTA_HOME/bin:$PATH"

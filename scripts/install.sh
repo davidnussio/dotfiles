@@ -72,6 +72,12 @@ popd &>> $LOGFILE
 # Source bash profile
 reloadBashProfile &>> $LOGFILE
 
+# Install github cli
+apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+apt-add-repository https://cli.github.com/packages
+apt update
+apt install gh
+
 # Install spaceVim
 printf "📦 Install spaceVim\n"
 curl -sLf https://spacevim.org/install.sh | bash &>> $LOGFILE
@@ -111,29 +117,33 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
     sudo apt install -y openconnect network-manager-openconnect network-manager-openconnect-gnome &>> $LOGFILE
 fi
 
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Install rust packages
+cargo install oha
+
+# Source bash profile
+reloadBashProfile
+
 # SNAP packages
 printf "📦 snap packages\n"
 sudo snap install mdless &>> $LOGFILE
 
 # Install n for managing Node versions (using npm)
-printf "📦 Install n\n"
-# -y automates installation, -n avoids modifying bash_profile
-curl -s -L https://git.io/n-install | bash -s -- -n -y &>> $LOGFILE
+printf "📦 Install volta\n"
+curl https://get.volta.sh | bash &>> $LOGFILE
 
 # Source bash profile
 reloadBashProfile
 
 # Upgrade node
 printf "📦 Install Node LTS using n\n"
-n lts
-
-# Remove unused versions of node
-printf "🚮 Clean Node installation using n\n"
-n prune &>> $LOGFILE
+volta install node
 
 # Install some global packages
 printf "📦 Install global npm packages\n"
-npm i -g yarn nodemon npm-check moleculer-cli diff-so-fancy jwt-cli &>> $LOGFILE
+npm i -g yarn nodemon npm-check autocannon moleculer-cli hopa diff-so-fancy jwt-cli basho serve &>> $LOGFILE
 
 # Print 
 printf "✅ All done! \n"
