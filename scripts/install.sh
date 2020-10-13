@@ -66,7 +66,7 @@ git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles &>>
 printf "📦 Stow dotfiles: bash git\n"
 pushd ~/dotfiles &>> $LOGFILE
 rm ../.bash* ../.profile &>> $LOGFILE
-stow bash git &>> $LOGFILE
+stow bash git space-vim &>> $LOGFILE
 popd &>> $LOGFILE
 
 # Source bash profile
@@ -78,9 +78,13 @@ apt-add-repository https://cli.github.com/packages
 apt update
 apt install gh
 
-# Install spaceVim
-printf "📦 Install spaceVim\n"
-curl -sLf https://spacevim.org/install.sh | bash &>> $LOGFILE
+# Install space-vim (http://vim.liuchengxu.org/)
+printf "📦 Install space-vim\n"
+bash <(curl -fsSL https://raw.githubusercontent.com/liuchengxu/space-vim/master/install.sh) &>> $LOGFILE
+
+# pip3 install --upgrade pynvim
+# pip3 install --upgrade msgpack
+
 
 printf "🏢 Install GUI tools? ${INSTALL_DEV_GUI_TOOLS}\n"
 if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
@@ -126,9 +130,12 @@ cargo install oha
 # Source bash profile
 reloadBashProfile
 
-# SNAP packages
-printf "📦 snap packages\n"
-sudo snap install mdless &>> $LOGFILE
+
+if [[ -e $(which snap2) ]]; do
+    # SNAP packages
+    printf "📦 snap packages\n"
+    sudo snap install mdless &>> $LOGFILE
+fi
 
 # Install n for managing Node versions (using npm)
 printf "📦 Install volta\n"
@@ -142,8 +149,8 @@ printf "📦 Install Node LTS using n\n"
 volta install node
 
 # Install some global packages
-printf "📦 Install global npm packages\n"
-npm i -g yarn nodemon npm-check autocannon moleculer-cli hopa diff-so-fancy jwt-cli basho serve &>> $LOGFILE
+printf "📦 Install global node packages (volta install)\n"
+volta install nodemon npm-check moleculer-cli hopa diff-so-fancy jwt-cli basho serve &>> $LOGFILE
 
 # Print 
 printf "✅ All done! \n"

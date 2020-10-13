@@ -1,6 +1,10 @@
 # Easily fix git conflicts
 alias conflicts="git exec vim -p \$(git conflicts)"
 
+alias v=nvim
+alias vi=nvim
+alias vim=nvim
+
 # Conveniently edit config files
 alias evim='vim ~/.vimrc'
 alias ebash='vim ~/.bash_profile'

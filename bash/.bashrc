@@ -6,3 +6,5 @@ source ~/.bash_profile
 #     [[ $- != *i* ]] && return
 #     [[ -z "$TMUX" ]] && exec tmux
 # fi
+
+[ -f ~/.fzf.bash ] && source ~/.fzf.bash
