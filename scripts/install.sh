@@ -31,7 +31,7 @@ command -v sudo >/dev/null 2>&1 || { alias sudo='dummySudo'; }
 printf "👑 Electing user\n"
 sudo -v 
 
-printf "🔄 Updating system\n"
+# printf "🔄 Updating system\n"
 sudo apt update &>> $LOGFILE && sudo apt full-upgrade -y &>> $LOGFILE
 
 # Configure watches
@@ -84,9 +84,8 @@ fi
 
 # Install brew
 printf "📦 Install brew\n"
-HOMEBREW_PREFIX_DEFAULT="/home/david/.linuxbrew"
-if [[ ! -d $HOMEBREW_PREFIX_DEFAULT ]]; then
-    curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash &>> $LOGFILE
+if [[ ! -d "/home/linuxbrew/.linuxbrew" ]]; then
+    curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash 
 fi
 
 # Install brew deps

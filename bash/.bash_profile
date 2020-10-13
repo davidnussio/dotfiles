@@ -194,10 +194,11 @@ if [ -a ~/.bash_profile.local ]; then
   source ~/.bash_profile.local
 fi
 
-
+# Brew
 export PATH=${PATH}:${HOME}/bin
-eval $(/home/david/.linuxbrew/bin/brew shellenv)
+eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
 
+# Rust cargo
 export PATH="$HOME/.cargo/bin:$PATH"
 
 # Volta Path
