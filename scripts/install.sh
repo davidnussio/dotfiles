@@ -60,30 +60,49 @@ localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 &>>
 
 # Clone dotfiles configuration
 printf "📦 Clone davidnussio/dotfiles from github\n"
-git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles &>> $LOGFILE
+if [[ ! -d ~/dotfiles ]]; then
+    git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles &>> $LOGFILE
+fi
 
 # Source bash profile
 reloadBashProfile &>> $LOGFILE
 
+# Install flatpak
+if [[ ! $(which flatpak) ]]; then
+    sudo apt install -y flatpak
+    flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+fi
+
 # Install github cli
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0 &>> $LOGFILE
-sudo apt-add-repository https://cli.github.com/packages &>> $LOGFILE
-sudo apt update &>> $LOGFILE
-sudo -y apt install gh &>> $LOGFILE
+printf "📦 Github cli\n"
+if [[ ! $(which gh) ]]; then
+    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0 &>> $LOGFILE
+    sudo apt-add-repository https://cli.github.com/packages &>> $LOGFILE
+    sudo apt update &>> $LOGFILE
+    sudo -y apt install gh &>> $LOGFILE
+fi
 
 # Install brew
+printf "📦 Install brew\n"
 HOMEBREW_PREFIX_DEFAULT="/home/david/.linuxbrew"
-curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash &>> $LOGFILE
-brew update
-brew install go
+if [[ ! -d $HOMEBREW_PREFIX_DEFAULT ]]; then
+    curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash &>> $LOGFILE
+fi
+
+# Install brew deps
+brew install gcc go &>> $LOGFILE
 
 
 # Install space-vim (http://vim.liuchengxu.org/)
 printf "📦 Install space-vim\n"
-curl -fsSL https://raw.githubusercontent.com/liuchengxu/space-vim/master/install.sh | bash -s -- --all &>> $LOGFILE
+if [[ -d $HOME/.config/nvim ]]; then
+    prinf "$HOME/.config/nvim already exists: SKIP\n"
+else
+    curl -fsSL https://raw.githubusercontent.com/liuchengxu/space-vim/master/install.sh | bash -s -- --all &>> $LOGFILE
 
-# pip3 install --upgrade pynvim
-# pip3 install --upgrade msgpack
+    pip3 install --upgrade pynvim
+    pip3 install --upgrade msgpack
+fi
 
 # Install dotfiles
 printf "📦 Stow dotfiles: bash git\n"
@@ -115,13 +134,15 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
     #
 
     # VS Code
-    sudo snap install code-insiders --classic
+    sudo snap install code --classic
 
     # Android
     sudo snap install android-studio --classic
 
     # Install DBeaver
-    sudo snap install dbeaver-ce
+    flatpak install io.dbeaver.DBeaverCommunity
+    flatpak install org.gimp.GIMP
+    flatpak install com.wps.Office
 
     # VPN
     printf "📦 openconnect\n"
@@ -129,7 +150,7 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
 fi
 
 # Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh sh -s -- --no-modify-path 
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --no-modify-path -y
 
 # Install rust packages
 cargo install oha
@@ -138,7 +159,7 @@ cargo install oha
 reloadBashProfile
 
 
-if [[ -e $(which snap2) ]]; do
+if [[ -e $(which snap2) ]]; then
     # SNAP packages
     printf "📦 snap packages\n"
     sudo snap install mdless &>> $LOGFILE
@@ -146,7 +167,7 @@ fi
 
 # Install n for managing Node versions (using npm)
 printf "📦 Install volta\n"
-curl https://get.volta.sh | bash &>> $LOGFILE
+curl https://get.volta.sh | bash -s -- --skip-setup &>> $LOGFILE
 
 # Source bash profile
 reloadBashProfile
@@ -157,7 +178,7 @@ volta install node
 
 # Install some global packages
 printf "📦 Install global node packages (volta install)\n"
-volta install nodemon npm-check moleculer-cli hopa diff-so-fancy jwt-cli basho serve &>> $LOGFILE
+volta install nodemon npm-check moleculer-cli hopa diff-so-fancy jwt-cli basho serve neovim &>> $LOGFILE
 
 # Print 
 printf "✅ All done! \n"
