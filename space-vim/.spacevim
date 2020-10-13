@@ -12,7 +12,7 @@ let g:spacevim_plug_home = '~/.vim/plugged'
 " Refer to https://github.com/liuchengxu/space-vim/blob/master/layers/LAYERS.md for all available layers.
 let g:spacevim_layers = [
       \ 'fzf', 'better-defaults', 'which-key', 'lsp',
-      \ 'auto-completion', 'deoplete', 'javascript', 'syntax-checking',
+      \ 'auto-completion', 'javascript', 'syntax-checking',
       \ 'file-manager'
       \ ]
 
@@ -36,6 +36,7 @@ function! UserInit()
 
   " Add your own plugin via Plug command.
   Plug 'junegunn/seoul256.vim'
+  Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 endfunction
 
