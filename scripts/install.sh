@@ -62,28 +62,35 @@ localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 &>>
 printf "📦 Clone davidnussio/dotfiles from github\n"
 git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles &>> $LOGFILE
 
+# Source bash profile
+reloadBashProfile &>> $LOGFILE
+
+# Install github cli
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0 &>> $LOGFILE
+sudo apt-add-repository https://cli.github.com/packages &>> $LOGFILE
+sudo apt update &>> $LOGFILE
+sudo -y apt install gh &>> $LOGFILE
+
+# Install brew
+HOMEBREW_PREFIX_DEFAULT="/home/david/.linuxbrew"
+curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash &>> $LOGFILE
+brew update
+brew install go
+
+
+# Install space-vim (http://vim.liuchengxu.org/)
+printf "📦 Install space-vim\n"
+curl -fsSL https://raw.githubusercontent.com/liuchengxu/space-vim/master/install.sh | bash -s -- --all &>> $LOGFILE
+
+# pip3 install --upgrade pynvim
+# pip3 install --upgrade msgpack
+
 # Install dotfiles
 printf "📦 Stow dotfiles: bash git\n"
 pushd ~/dotfiles &>> $LOGFILE
 rm ../.bash* ../.profile &>> $LOGFILE
 stow bash git space-vim &>> $LOGFILE
 popd &>> $LOGFILE
-
-# Source bash profile
-reloadBashProfile &>> $LOGFILE
-
-# Install github cli
-apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
-apt-add-repository https://cli.github.com/packages
-apt update
-apt install gh
-
-# Install space-vim (http://vim.liuchengxu.org/)
-printf "📦 Install space-vim\n"
-bash <(curl -fsSL https://raw.githubusercontent.com/liuchengxu/space-vim/master/install.sh) &>> $LOGFILE
-
-# pip3 install --upgrade pynvim
-# pip3 install --upgrade msgpack
 
 
 printf "🏢 Install GUI tools? ${INSTALL_DEV_GUI_TOOLS}\n"
@@ -122,7 +129,7 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
 fi
 
 # Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh sh -s -- --no-modify-path 
 
 # Install rust packages
 cargo install oha

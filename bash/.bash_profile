@@ -196,7 +196,7 @@ fi
 
 
 export PATH=${PATH}:${HOME}/bin
-eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
+eval $(/home/david/.linuxbrew/bin/brew shellenv)
 
 export PATH="$HOME/.cargo/bin:$PATH"
 
