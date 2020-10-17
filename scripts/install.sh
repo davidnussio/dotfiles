@@ -62,7 +62,17 @@ localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 &>>
 printf "📦 Clone davidnussio/dotfiles from github\n"
 if [[ ! -d ~/dotfiles ]]; then
     git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles &>> $LOGFILE
+    git submodule init &>> $LOGFILE
+    git submodule update &>> $LOGFILE
 fi
+
+
+# Install dotfiles
+printf "📦 Stow dotfiles: bash git\n"
+pushd ~/dotfiles &>> $LOGFILE
+rm ../.bash* ../.profile &>> $LOGFILE
+stow bash git space-vim &>> $LOGFILE
+popd &>> $LOGFILE
 
 # Source bash profile
 reloadBashProfile &>> $LOGFILE
@@ -95,21 +105,13 @@ brew install gcc go &>> $LOGFILE
 # Install space-vim (http://vim.liuchengxu.org/)
 printf "📦 Install space-vim\n"
 if [[ -d $HOME/.config/nvim ]]; then
-    prinf "$HOME/.config/nvim already exists: SKIP\n"
+    printf "$HOME/.config/nvim already exists: SKIP\n"
 else
     curl -fsSL https://raw.githubusercontent.com/liuchengxu/space-vim/master/install.sh | bash -s -- --all &>> $LOGFILE
 
     pip3 install --upgrade pynvim
     pip3 install --upgrade msgpack
 fi
-
-# Install dotfiles
-printf "📦 Stow dotfiles: bash git\n"
-pushd ~/dotfiles &>> $LOGFILE
-rm ../.bash* ../.profile &>> $LOGFILE
-stow bash git space-vim &>> $LOGFILE
-popd &>> $LOGFILE
-
 
 printf "🏢 Install GUI tools? ${INSTALL_DEV_GUI_TOOLS}\n"
 if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
