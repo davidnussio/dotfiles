@@ -30,3 +30,5 @@
 	editor = code
 [help]
 	autocorrect = 1
+[pull]
+	rebase = false
