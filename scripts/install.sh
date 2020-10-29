@@ -89,7 +89,7 @@ if [[ ! $(which gh) ]]; then
     sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0 &>> $LOGFILE
     sudo apt-add-repository https://cli.github.com/packages &>> $LOGFILE
     sudo apt update &>> $LOGFILE
-    sudo -y apt install gh &>> $LOGFILE
+    sudo apt -y install gh &>> $LOGFILE
 fi
 
 # Install brew
@@ -100,7 +100,6 @@ fi
 
 # Install brew deps
 brew install gcc go &>> $LOGFILE
-
 
 # Install space-vim (http://vim.liuchengxu.org/)
 printf "📦 Install space-vim\n"
@@ -167,19 +166,31 @@ if [[ -e $(which snap2) ]]; then
 fi
 
 # Install n for managing Node versions (using npm)
-printf "📦 Install volta\n"
-curl https://get.volta.sh | bash -s -- --skip-setup &>> $LOGFILE
+printf "📦 Install n\n"
+curl -s -L https://git.io/n-install | bash -s -- -n -y &>> $LOGFILE
 
 # Source bash profile
 reloadBashProfile
 
 # Upgrade node
 printf "📦 Install Node LTS using n\n"
-volta install node
+n lts
+
+# Remove unused versions of node
+printf "🚮 Clean Node installation using n\n"
+n prune &>> $LOGFILE
 
 # Install some global packages
-printf "📦 Install global node packages (volta install)\n"
-volta install nodemon npm-check moleculer-cli hopa diff-so-fancy jwt-cli basho serve neovim &>> $LOGFILE
+printf "📦 Install global npm packages\n"
+npm i -g yarn nodemon npm-check moleculer-cli hopa diff-so-fancy jwt-cli basho serve neovim &>> $LOGFILE
+
+#  Note completion
+npm completion > ${HOME}/dotfiles/bash/.bash_completion.d/npm
+
+# Install kubernetes tools
+curl "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" --output ${HOME}/.local/bin/kubectl
+chmod +x ${HOME}/.local/bin/kubectl
+kubectl completion bash > ${HOME}/dotfiles/bash/.bash_completion.d/kubectl
 
 # Print 
 printf "✅ All done! \n"

@@ -194,6 +194,12 @@ if [ -a ~/.bash_profile.local ]; then
   source ~/.bash_profile.local
 fi
 
+
+export PATH=${PATH}:${HOME}/.local/bin
+
+# N Conf
+export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"
+
 # Brew
 export PATH=${PATH}:${HOME}/bin
 eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
@@ -201,6 +207,6 @@ eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
 # Rust cargo
 export PATH="$HOME/.cargo/bin:$PATH"
 
-# Volta Path
-export VOLTA_HOME="$HOME/.volta"
-export PATH="$VOLTA_HOME/bin:$PATH"
+
+# Java Home
+export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:bin/java::")

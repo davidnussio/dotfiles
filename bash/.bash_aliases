@@ -85,5 +85,3 @@ alias update='bash ~/dotfiles/scripts/update.sh'
 # Open something
 alias o=xdg-open
 
-# Code insiders
-alias code=code-insiders
