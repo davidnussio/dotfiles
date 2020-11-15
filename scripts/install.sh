@@ -172,6 +172,9 @@ curl -s -L https://git.io/n-install | bash -s -- -n -y &>> $LOGFILE
 # Source bash profile
 reloadBashProfile
 
+# Install nix-shell
+sh <(curl -L https://nixos.org/nix/install)
+
 # Upgrade node
 printf "📦 Install Node LTS using n\n"
 n lts
