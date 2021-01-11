@@ -9,10 +9,11 @@ export DEBIAN_FRONTEND=noninteractive
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.utf8
 
-reloadBashProfile() {
-    # Source bash profile
-    printf "🌀 reload bash profile\n"
+reloadShProfile() {
+    # Source sh profile
+    printf "🌀 reload sh profile\n"
     source $HOME/.bashrc
+    source $HOME/.zshrc
 }
 
 # Dummy sudo command for docker container without sudo
@@ -44,7 +45,7 @@ fi
 
 # Install base packages
 printf "📦 Install apt packages\n"
-sudo apt install -y bash bash-completion git locales \
+sudo apt install -y zsh bash bash-completion git locales \
     stow neovim tree docker docker-compose jq httpie curl \
     build-essential cmake python3-dev \
     htop fzf silversearcher-ag \
@@ -66,12 +67,17 @@ if [[ ! -d ~/dotfiles ]]; then
     git submodule update &>> $LOGFILE
 fi
 
+# Link zsh p10k theme
+ln -sfn ~/dotfiles/zsh-extra/powerlevel10k ~/dotfiles/zsh/.oh-my-zsh/themes/
+
+# Link zsh-z plugin
+ln -sfn ~/dotfiles/zsh-extra/zsh-z ~/dotfiles/zsh/.oh-my-zsh/plugins/
 
 # Install dotfiles
 printf "📦 Stow dotfiles: bash git\n"
 pushd ~/dotfiles &>> $LOGFILE
 rm ../.bash* ../.profile &>> $LOGFILE
-stow bash git space-vim &>> $LOGFILE
+stow zsh bash git space-vim &>> $LOGFILE
 popd &>> $LOGFILE
 
 # Source bash profile
