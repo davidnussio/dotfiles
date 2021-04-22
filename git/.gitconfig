@@ -3,6 +3,8 @@
   path = ~/.gitconfig.local
 [includeIf "gitdir:~/dev/eoc/"]
   path = ~/dev/eoc/.gitconfig.eoc
+[core]
+  autocrlf = input
 [color]
   ui = auto
 [push]

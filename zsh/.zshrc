@@ -78,6 +78,7 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(git zsh-z zsh-completions timewarrior)
+autoload -U compinit && compinit
 
 source $ZSH/oh-my-zsh.sh
 
@@ -154,7 +155,7 @@ alias reload="exec ${SHELL} -l"
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 # Conf jrebel
-export REBEL_HOME=${HOME}/.jrebel/jrebel
+export REBEL_HOME=${HOME}/.jrebel/
 export MAVEN_OPTS="-Xshare:off -agentpath:$REBEL_HOME/lib/libjrebel64.so"
 
 
@@ -183,3 +184,11 @@ export PATH=$PATH:$ANDROID_HOME/tools/bin
 export PATH=$PATH:$ANDROID_HOME/platform-tools
 
 
+function path_remove {
+  # Delete path by parts so we can never accidentally remove sub paths
+  PATH=${PATH//":$1:"/":"} # delete any instances in the middle
+  PATH=${PATH/#"$1:"/} # delete any instance at the beginning
+  PATH=${PATH/%":$1"/} # delete any instance in the at the end
+}
+
+path_remove '/mnt/c/Program Files/nodejs'

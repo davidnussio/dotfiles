@@ -45,12 +45,11 @@ fi
 
 # Install base packages
 printf "📦 Install apt packages\n"
-sudo apt install -y zsh bash bash-completion git locales \
+sudo apt install -y zsh git locales \
     stow neovim tree docker docker-compose jq httpie curl \
     build-essential cmake python3-dev \
-    htop fzf silversearcher-ag \
-    openjdk-8-jdk-headless maven snapd autojump \
-    qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils \
+    htop fzf silversearcher-ag timewarrior \
+    openjdk-8-jdk-headless maven autojump \
     fonts-firacode inotify-tools jpegoptim \
     apt-transport-https ca-certificates gnupg \
     &>> $LOGFILE

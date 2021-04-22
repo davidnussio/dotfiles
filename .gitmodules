@@ -88,3 +88,9 @@
 [submodule "fzf"]
 	path = fzf
 	url = https://github.com/junegunn/fzf.git
+[submodule "zsh-extras/zsh-completions"]
+	path = zsh-extras/zsh-completions
+	url = https://github.com/zsh-users/zsh-completions
+[submodule "zsh-extras/timewarrior"]
+	path = zsh-extras/timewarrior
+	url = https://github.com/svenXY/timewarrior
