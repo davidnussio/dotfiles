@@ -47,11 +47,11 @@ fi
 printf "📦 Install apt packages\n"
 sudo apt install -y zsh git locales \
     stow neovim tree docker docker-compose jq httpie curl \
-    build-essential cmake python3-dev \
+    build-essential cmake python3-dev python3-pip \
     htop fzf silversearcher-ag timewarrior \
     openjdk-8-jdk-headless maven autojump \
     fonts-firacode inotify-tools jpegoptim \
-    apt-transport-https ca-certificates gnupg \
+    apt-transport-https ca-certificates gnupg libssl-dev \
     &>> $LOGFILE
 
 # Configure locale
@@ -61,10 +61,12 @@ localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 &>>
 # Clone dotfiles configuration
 printf "📦 Clone davidnussio/dotfiles from github\n"
 if [[ ! -d ~/dotfiles ]]; then
-    git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles &>> $LOGFILE
-    git submodule init &>> $LOGFILE
-    git submodule update &>> $LOGFILE
+    git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles &>> $LOGFILE    
 fi
+
+printf "📦 Init and update submodules\n"
+git submodule init &>> $LOGFILE
+git submodule update &>> $LOGFILE
 
 # Link zsh p10k theme
 ln -sfn ~/dotfiles/zsh-extra/powerlevel10k ~/dotfiles/zsh/.oh-my-zsh/themes/
@@ -82,10 +84,14 @@ popd &>> $LOGFILE
 # Source bash profile
 reloadBashProfile &>> $LOGFILE
 
+printf "📦 Install python packages\n"
+pip install powerline-status powerline-gitstatus &>> $LOGFILE
+
+
 # Install flatpak
 if [[ ! $(which flatpak) ]]; then
     sudo apt install -y flatpak
-    flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo &>> $LOGFILE
 fi
 
 # Install github cli
@@ -119,7 +125,7 @@ fi
 
 printf "🏢 Install GUI tools? ${INSTALL_DEV_GUI_TOOLS}\n"
 if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
-    sudo apt install -y adwaita-qt gnome-tweak-tool ttf-mscorefonts-installer &>> $LOGFILE
+    sudo apt install -y gnome-tweak-tool ttf-mscorefonts-installer &>> $LOGFILE
     # Google cloud
     echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
@@ -132,8 +138,8 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
     sudo apt install -y google-chrome-beta
 
     # OBS Studio
-    sudo add-apt-repository ppa:obsproject/obs-studio
-    sudo apt -y install obs-studio
+    #sudo add-apt-repository ppa:obsproject/obs-studio
+    #sudo apt -y install obs-studio
     # https://srcco.de/posts/using-obs-studio-with-v4l2-for-google-hangouts-meet.html
     # sudo modprobe v4l2loopback devices=1 video_nr=10 card_label="OBS Cam" exclusive_caps=1
     #
@@ -146,12 +152,12 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
 
     # Install DBeaver
     flatpak install io.dbeaver.DBeaverCommunity
-    flatpak install org.gimp.GIMP
-    flatpak install com.wps.Office
+    #flatpak install org.gimp.GIMP
+    #flatpak install com.wps.Office
 
     # VPN
     printf "📦 openconnect\n"
-    sudo apt install -y openconnect network-manager-openconnect network-manager-openconnect-gnome &>> $LOGFILE
+    #sudo apt install -y openconnect network-manager-openconnect network-manager-openconnect-gnome &>> $LOGFILE
 fi
 
 # Install Rust
@@ -164,7 +170,7 @@ cargo install oha
 reloadBashProfile
 
 
-if [[ -e $(which snap2) ]]; then
+if [[ -e $(which snap) ]]; then
     # SNAP packages
     printf "📦 snap packages\n"
     sudo snap install mdless &>> $LOGFILE

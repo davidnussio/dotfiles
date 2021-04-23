@@ -116,11 +116,6 @@ if ! shopt -oq posix; then
   fi
 fi
 
-if [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then
-    GIT_PROMPT_ONLY_IN_REPO=0
-    source $HOME/.bash-git-prompt/gitprompt.sh
-fi
-
 # source compat completion directory definitions
 compat_dir="$HOME/.bash_completion.d"
 if [[ -d $compat_dir && -r $compat_dir && -x $compat_dir ]]; then
@@ -182,20 +177,28 @@ function gitignore() { curl -sL https://www.gitignore.io/api/$@ ;}
 # Enable typing a directory name to go there
 shopt -s autocd
 
-if [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then
+if [ -f "$HOME/.bash-git-prompt/xxxgitprompt.sh" ]; then
     GIT_PROMPT_ONLY_IN_REPO=0
     #GIT_PROMPT_START="\h $GIT_PROMPT_START"    # uncomment for custom prompt start sequence
     #GIT_PROMPT_END=""      # uncomment for custom prompt end sequence
     source $HOME/.bash-git-prompt/gitprompt.sh
 fi
 
+
 # Load this computer's additional configurations
 if [ -a ~/.bash_profile.local ]; then
   source ~/.bash_profile.local
 fi
 
-
 export PATH=${PATH}:${HOME}/.local/bin
+
+# Powerline configuration
+if [ -f $HOME/.local/lib/python3.9/site-packages/powerline/bindings/bash/powerline.sh ]; then
+    $HOME/.local/bin/powerline-daemon -q
+    POWERLINE_BASH_CONTINUATION=1
+    POWERLINE_BASH_SELECT=1
+    source $HOME/.local/lib/python3.9/site-packages/powerline/bindings/bash/powerline.sh
+fi
 
 # N Conf
 export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"
