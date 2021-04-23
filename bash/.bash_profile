@@ -192,12 +192,17 @@ fi
 
 export PATH=${PATH}:${HOME}/.local/bin
 
+PYTHON_LOCAL_DIR=$HOME/.local/lib/python3.8
+if [ -d $HOME/.local/lib/python3.9 ]; then
+    PYTHON_LOCAL_DIR=$HOME/.local/lib/python3.9
+fi
+
 # Powerline configuration
-if [ -f $HOME/.local/lib/python3.9/site-packages/powerline/bindings/bash/powerline.sh ]; then
+if [ -f $PYTHON_LOCAL_DIR/site-packages/powerline/bindings/bash/powerline.sh ]; then
     $HOME/.local/bin/powerline-daemon -q
     POWERLINE_BASH_CONTINUATION=1
     POWERLINE_BASH_SELECT=1
-    source $HOME/.local/lib/python3.9/site-packages/powerline/bindings/bash/powerline.sh
+    source $PYTHON_LOCAL_DIR/site-packages/powerline/bindings/bash/powerline.sh
 fi
 
 # N Conf
@@ -222,3 +227,8 @@ export PATH=$PATH:$ANDROID_HOME/tools
 export PATH=$PATH:$ANDROID_HOME/tools/bin
 export PATH=$PATH:$ANDROID_HOME/platform-tools
 
+# Fix wsl path
+if [ -d "/mnt/c/Program Files" ]; then
+    export PATH=$(echo "$PATH" | sed -e 's/\/mnt\/c\/Program Files\/nodejs://')
+    export PATH=$(echo "$PATH" | sed -e 's/\/mnt\/c\/Program Files\/npm://')
+fi

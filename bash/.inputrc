@@ -7,8 +7,8 @@ set show-all-if-ambiguous on
 
 # Use the text that has already been typed as the prefix for searching through
 # commands (i.e. more intelligent Up/Down behavior)
-"\e[5~": history-search-backward
-"\e[6~": history-search-forward
+"\e[A": history-search-backward
+"\e[B": history-search-forward
 
 # Do not autocomplete hidden files unless the pattern explicitly begins with a dot
 set match-hidden-files on

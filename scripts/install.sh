@@ -85,7 +85,7 @@ popd &>> $LOGFILE
 reloadBashProfile &>> $LOGFILE
 
 printf "📦 Install python packages\n"
-pip install powerline-status powerline-gitstatus &>> $LOGFILE
+pip3 install powerline-status powerline-gitstatus &>> $LOGFILE
 
 
 # Install flatpak
