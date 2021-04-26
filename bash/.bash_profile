@@ -205,6 +205,9 @@ if [ -f $PYTHON_LOCAL_DIR/site-packages/powerline/bindings/bash/powerline.sh ]; 
     source $PYTHON_LOCAL_DIR/site-packages/powerline/bindings/bash/powerline.sh
 fi
 
+# FZF
+[ -f ~/.fzf.bash ] && source ~/.fzf.bash
+
 # N Conf
 export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"
 

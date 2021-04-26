@@ -49,7 +49,7 @@ sudo apt install -y zsh git locales \
     stow neovim tree docker docker-compose jq httpie curl \
     build-essential cmake python3-dev python3-pip \
     htop fzf silversearcher-ag timewarrior \
-    openjdk-8-jdk-headless maven autojump \
+    openjdk-8-jdk-headless openjdk-11-jdk-headless maven autojump \
     fonts-firacode inotify-tools jpegoptim \
     apt-transport-https ca-certificates gnupg libssl-dev \
     &>> $LOGFILE
@@ -63,7 +63,8 @@ printf "📦 Clone davidnussio/dotfiles from github\n"
 if [[ ! -d ~/dotfiles ]]; then
     git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles &>> $LOGFILE    
 fi
-
+gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-up "['<Super><Shift>Page_Up']"
+gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-down "['<Super><Shift>Page_Down']"
 printf "📦 Init and update submodules\n"
 git submodule init &>> $LOGFILE
 git submodule update &>> $LOGFILE
@@ -94,15 +95,6 @@ if [[ ! $(which flatpak) ]]; then
     flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo &>> $LOGFILE
 fi
 
-# Install github cli
-printf "📦 Github cli\n"
-if [[ ! $(which gh) ]]; then
-    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0 &>> $LOGFILE
-    sudo apt-add-repository https://cli.github.com/packages &>> $LOGFILE
-    sudo apt update &>> $LOGFILE
-    sudo apt -y install gh &>> $LOGFILE
-fi
-
 # Install brew
 printf "📦 Install brew\n"
 if [[ ! -d "/home/linuxbrew/.linuxbrew" ]]; then
@@ -111,6 +103,12 @@ fi
 
 # Install brew deps
 brew install gcc go &>> $LOGFILE
+
+# Install github cli
+printf "📦 Github cli\n"
+if [[ ! $(which gh) ]]; then
+    brew install gh &>> $LOGFILE
+fi
 
 # Install space-vim (http://vim.liuchengxu.org/)
 printf "📦 Install space-vim\n"
@@ -160,6 +158,15 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
     #sudo apt install -y openconnect network-manager-openconnect network-manager-openconnect-gnome &>> $LOGFILE
 fi
 
+# Configure gnome
+gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-up "['<Super>Page_Up']"
+gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-down "['<Super>Page_Down']"
+gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-right "['<Control><Super><Alt>Right']"
+gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-left "['<Control><Super><Alt>Left']"
+gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-up "['<Super><Shift>Page_Up']"
+gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-down "['<Super><Shift>Page_Down']"
+
+
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --no-modify-path -y
 
@@ -168,7 +175,6 @@ cargo install oha
 
 # Source bash profile
 reloadBashProfile
-
 
 if [[ -e $(which snap) ]]; then
     # SNAP packages
@@ -196,7 +202,7 @@ n prune &>> $LOGFILE
 
 # Install some global packages
 printf "📦 Install global npm packages\n"
-npm i -g yarn nodemon npm-check moleculer-cli hopa diff-so-fancy jwt-cli basho serve neovim &>> $LOGFILE
+npm i -g yarn nodemon npm-check moleculer-cli diff-so-fancy jwt-cli vsce serve neovim &>> $LOGFILE
 
 #  Note completion
 npm completion > ${HOME}/dotfiles/bash/.bash_completion.d/npm

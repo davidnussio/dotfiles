@@ -7,4 +7,4 @@ source ~/.bash_profile
 #     [[ -z "$TMUX" ]] && exec tmux
 # fi
 
-[ -f ~/.fzf.bash ] && source ~/.fzf.bash
+
