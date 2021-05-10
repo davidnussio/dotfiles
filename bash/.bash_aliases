@@ -76,7 +76,7 @@ hotgitfiles () {
 # Reload the shell (i.e. invoke as a login shell)
 alias reload="exec ${SHELL} -l"
 
-# Get macOS Software Updates, and update installed Homebrew and npm packages
+# Get Software Updates, and update installed Homebrew and npm packages
 alias update='bash ~/dotfiles/scripts/update.sh'
 
 # Enable aliases to be sudo’ed

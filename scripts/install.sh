@@ -136,8 +136,8 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
     sudo apt install -y google-chrome-beta
 
     # OBS Studio
-    #sudo add-apt-repository ppa:obsproject/obs-studio
-    #sudo apt -y install obs-studio
+    sudo add-apt-repository ppa:obsproject/obs-studio
+    sudo apt -y install obs-studio
     # https://srcco.de/posts/using-obs-studio-with-v4l2-for-google-hangouts-meet.html
     # sudo modprobe v4l2loopback devices=1 video_nr=10 card_label="OBS Cam" exclusive_caps=1
     #
@@ -165,7 +165,8 @@ gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-right "['<Contr
 gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-left "['<Control><Super><Alt>Left']"
 gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-up "['<Super><Shift>Page_Up']"
 gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-down "['<Super><Shift>Page_Down']"
-
+gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-left "[]"
+gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-right "[]"
 
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --no-modify-path -y

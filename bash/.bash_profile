@@ -198,7 +198,7 @@ if [ -d $HOME/.local/lib/python3.9 ]; then
 fi
 
 # Powerline configuration
-if [ -f $PYTHON_LOCAL_DIR/site-packages/powerline/bindings/bash/powerline.sh ]; then
+if [ -f x$PYTHON_LOCAL_DIR/site-packages/powerline/bindings/bash/powerline.sh ]; then
     $HOME/.local/bin/powerline-daemon -q
     POWERLINE_BASH_CONTINUATION=1
     POWERLINE_BASH_SELECT=1
@@ -235,3 +235,5 @@ if [ -d "/mnt/c/Program Files" ]; then
     export PATH=$(echo "$PATH" | sed -e 's/\/mnt\/c\/Program Files\/nodejs://')
     export PATH=$(echo "$PATH" | sed -e 's/\/mnt\/c\/Program Files\/npm://')
 fi
+
+eval "$(starship init bash)"

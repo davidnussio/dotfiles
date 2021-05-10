@@ -14,7 +14,7 @@ printf "🌀 Node update\n"
 n lts
 
 printf "🌀 Npm update\n"
-npm install npm -g
+#npm install npm -g
 npm update -g
 
 printf "🌀 Brew update\n"
