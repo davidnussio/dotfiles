@@ -4,18 +4,19 @@
 sudo -v
 
 printf "🌀 Ubuntu updates\n"
-sudo apt update
-sudo apt full-upgrade -y
+sudo apt update >& /dev/null
+sudo apt full-upgrade -y >& /dev/null
 
-printf "🌀 n update\n"
-n-update -y
+#printf "🌀 n update\n"
+#n-update -y
 
 printf "🌀 Node update\n"
-n lts
+#n lts
+#volta install node@lts
 
 printf "🌀 Npm update\n"
 #npm install npm -g
-npm update -g
+#npm update -g
 
 printf "🌀 Brew update\n"
 brew update
@@ -27,3 +28,4 @@ flatpak upgrade -y
 printf "🌀 Update completion files\n"
 gh completion > ~/dotfiles/bash/.bash_completion.d/gh
 npm completion > ~/dotfiles/bash/.bash_completion.d/npm
+fnm completions > ~/dotfiles/bash/.bash_completion.d/fnm

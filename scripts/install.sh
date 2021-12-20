@@ -185,7 +185,7 @@ fi
 
 # Install n for managing Node versions (using npm)
 printf "📦 Install n\n"
-curl -s -L https://git.io/n-install | bash -s -- -n -y &>> $LOGFILE
+curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "./.fnm" --skip-shell &>> $LOGFILE
 
 # Source bash profile
 reloadBashProfile
@@ -194,16 +194,16 @@ reloadBashProfile
 sh <(curl -L https://nixos.org/nix/install)
 
 # Upgrade node
-printf "📦 Install Node LTS using n\n"
-n lts
+#printf "📦 Install Node LTS using n\n"
+#n lts
 
 # Remove unused versions of node
-printf "🚮 Clean Node installation using n\n"
-n prune &>> $LOGFILE
+#printf "🚮 Clean Node installation using n\n"
+#n prune &>> $LOGFILE
 
 # Install some global packages
 printf "📦 Install global npm packages\n"
-npm i -g yarn nodemon npm-check moleculer-cli diff-so-fancy jwt-cli vsce serve neovim &>> $LOGFILE
+npm i -g yarn nodemon npm-check-updates moleculer-cli diff-so-fancy jwt-cli vsce serve neovim firebase-tools &>> $LOGFILE
 
 #  Note completion
 npm completion > ${HOME}/dotfiles/bash/.bash_completion.d/npm

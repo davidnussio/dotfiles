@@ -216,7 +216,6 @@ export PATH=${PATH}:${HOME}/bin
 eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
 
 # Rust cargo
-export PATH="$HOME/.cargo/bin:$PATH"
 
 
 # Java Home
@@ -237,3 +236,8 @@ if [ -d "/mnt/c/Program Files" ]; then
 fi
 
 eval "$(starship init bash)"
+. "$HOME/.cargo/env"
+
+# fnm
+export PATH=/home/david/.fnm:$PATH
+eval "`fnm env`"
