@@ -194,8 +194,8 @@ reloadBashProfile
 sh <(curl -L https://nixos.org/nix/install)
 
 # Upgrade node
-#printf "📦 Install Node LTS using n\n"
-#n lts
+printf "📦 Install Node LTS using n\n"
+curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "./.fnm" --skip-shell
 
 # Remove unused versions of node
 #printf "🚮 Clean Node installation using n\n"

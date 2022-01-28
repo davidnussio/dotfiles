@@ -240,4 +240,5 @@ eval "$(starship init bash)"
 
 # fnm
 export PATH=/home/david/.fnm:$PATH
-eval "`fnm env`"
+eval "$(fnm env --use-on-cd)"
+

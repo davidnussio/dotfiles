@@ -20,12 +20,12 @@ printf "🌀 Npm update\n"
 
 printf "🌀 Brew update\n"
 brew update
+brew upgrade
 
 printf "🌀 Flatpack update\n"
 flatpak upgrade -y
 
 # Update commands completion
 printf "🌀 Update completion files\n"
-gh completion > ~/dotfiles/bash/.bash_completion.d/gh
 npm completion > ~/dotfiles/bash/.bash_completion.d/npm
 fnm completions > ~/dotfiles/bash/.bash_completion.d/fnm
