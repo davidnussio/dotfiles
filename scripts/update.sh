@@ -23,7 +23,7 @@ brew update
 brew upgrade
 
 printf "🌀 Flatpack update\n"
-flatpak upgrade -y
+flatpak update -y
 
 # Update commands completion
 printf "🌀 Update completion files\n"

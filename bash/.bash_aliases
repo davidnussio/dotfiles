@@ -72,6 +72,8 @@ hotgitfiles () {
     awk 'BEGIN {print "commits\t\tfiles"} { print $1 "\t\t" $2; }'
 }
 
+# git utils
+alias gitroot='cd "$(git rev-parse --show-toplevel)"'
 
 # Reload the shell (i.e. invoke as a login shell)
 alias reload="exec ${SHELL} -l"
