@@ -242,3 +242,15 @@ eval "$(starship init bash)"
 export PATH=/home/david/.fnm:$PATH
 eval "$(fnm env --use-on-cd)"
 
+__fnmj() {
+    echo "using alias"
+    \j "$@" || return $?
+    echo "check version                                                                                                                                               "
+    __fnm_use_if_file_found
+}
+__fnmjc() {
+    \j "$@" || return $?
+    __fnm_use_if_file_found
+}
+alias j=__fnmj
+alias jc=__fnmjc
