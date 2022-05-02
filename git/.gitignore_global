@@ -5,6 +5,7 @@ Session.vim
 node_modules
 dist
 .next
+build
 
 # Compiled source #
 ###################
