@@ -254,3 +254,7 @@ __fnmjc() {
 }
 alias j=__fnmj
 alias jc=__fnmjc
+
+
+export PNPM_HOME="/home/david/.local/share/pnpm"
+export PATH="$PNPM_HOME:$PATH"
