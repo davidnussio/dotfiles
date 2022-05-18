@@ -203,6 +203,16 @@ reloadBashProfile
 # Install nix-shell
 sh <(curl -L https://nixos.org/nix/install)
 
+# Upgrade node
+printf "📦 Install Node LTS using n\n"
+curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "./.fnm" --skip-shell &>> $LOGFILE
+
+# Install pnpm
+printf "📦 Install Node LTS using n\n"
+curl -fsSL https://get.pnpm.io/install.sh | PNPM_VERSION=7.0.0-rc.9 sh - &>> $LOGFILE
+
+# Source bash profile
+reloadBashProfile
 
 # Remove unused versions of node
 #printf "🚮 Clean Node installation using n\n"
@@ -210,7 +220,8 @@ sh <(curl -L https://nixos.org/nix/install)
 
 # Install some global packages
 printf "📦 Install global npm packages\n"
-npm i -g yarn nodemon npm-check-updates moleculer-cli diff-so-fancy jwt-cli vsce serve neovim firebase-tools &>> $LOGFILE
+pnpm add -g yarn nodemon npm-check-updates moleculer-cli diff-so-fancy jwt-cli \
+    esbuild-runner vsce serve neovim firebase-tools &>> $LOGFILE
 
 #  Note completion
 npm completion > ${HOME}/dotfiles/bash/.bash_completion.d/npm
