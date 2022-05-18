@@ -11,6 +11,10 @@ alias ebash='vim ~/.bash_profile'
 alias egit='vim ~/.gitconfig'
 alias etmux='vim ~/.tmux.conf'
 
+# Jump to dirs
+alias dev="cd $HOME/dev"
+alias repo-eoc="cd $HOME/dev/eoc/repos"
+alias repo-github="cd $HOME/dev/github/repos"
 
 # Common typos
 alias vmi='vim'
