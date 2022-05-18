@@ -45,14 +45,24 @@ fi
 
 # Install base packages
 printf "📦 Install apt packages\n"
-sudo apt install -y zsh git locales \
-    stow neovim tree docker docker-compose jq httpie curl \
+sudo apt install -y zsh git locales unzip \
+    stow neovim tree jq httpie curl \
     build-essential cmake python3-dev python3-pip \
     htop fzf silversearcher-ag timewarrior \
     openjdk-8-jdk-headless openjdk-11-jdk-headless maven autojump \
     fonts-firacode inotify-tools jpegoptim \
     apt-transport-https ca-certificates gnupg libssl-dev \
     &>> $LOGFILE
+
+
+printf "📦 Install docker\n"
+sudo apt-get remove docker docker.io containerd runc
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt update
+sudo apt intall -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
 # Configure locale
 printf "🌍 Configure locales\n"
@@ -185,7 +195,7 @@ fi
 
 # Install n for managing Node versions (using npm)
 printf "📦 Install n\n"
-curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "./.fnm" --skip-shell &>> $LOGFILE
+curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "$HOME/.fnm" --skip-shell &>> $LOGFILE
 
 # Source bash profile
 reloadBashProfile
@@ -193,9 +203,6 @@ reloadBashProfile
 # Install nix-shell
 sh <(curl -L https://nixos.org/nix/install)
 
-# Upgrade node
-printf "📦 Install Node LTS using n\n"
-curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "./.fnm" --skip-shell
 
 # Remove unused versions of node
 #printf "🚮 Clean Node installation using n\n"
