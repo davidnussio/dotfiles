@@ -91,3 +91,15 @@ alias update='bash ~/dotfiles/scripts/update.sh'
 # Open something
 alias o=xdg-open
 
+# Java
+
+tomcat-run() {
+  mvnv ${1:-8} tomcat7:run -Dliquibaseshouldrun=false
+}
+
+mvnv() {
+  local JAVAVER=${1:-"8"}
+  shift 1
+  JAVA_HOME=$(ls -d /usr/lib/jvm/java-${JAVAVER}-openjdk-amd64/) MAVEN_OPTS="${MAVEN_OPTS} -agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=n" mvn "$@"
+}
+

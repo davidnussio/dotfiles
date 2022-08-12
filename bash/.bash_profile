@@ -238,21 +238,6 @@ fi
 eval "$(starship init bash)"
 . "$HOME/.cargo/env"
 
-# fnm
-export PATH=/home/david/.fnm:$PATH
-eval "$(fnm env --use-on-cd)"
 
-__fnmj() {
-    \j "$@" || return $?
-    __fnm_use_if_file_found
-}
-__fnmjc() {
-    \j "$@" || return $?
-    __fnm_use_if_file_found
-}
-alias j=__fnmj
-alias jc=__fnmjc
-
-
-export PNPM_HOME="/home/david/.local/share/pnpm"
-export PATH="$PNPM_HOME:$PATH"
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
