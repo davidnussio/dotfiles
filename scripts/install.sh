@@ -220,7 +220,7 @@ nvm install node --lts &>>$LOGFILE
 # Install some global packages
 printf "📦 Install global npm packages\n"
 npm install -g yarn nodemon npm-check-updates moleculer-cli diff-so-fancy jwt-cli \
-    esbuild-runner vsce serve neovim firebase-tools &>>$LOGFILE
+    esbuild-runner vsce serve neovim firebase-tools vercel &>>$LOGFILE
 
 #  Note completion
 npm completion >${HOME}/dotfiles/bash/.bash_completion.d/npm
