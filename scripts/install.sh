@@ -6,6 +6,7 @@
 }
 
 INSTALL_DEV_GUI_TOOLS=n
+DEFAULT_SHELL=/home/linuxbrew/.linuxbrew/bin/fish
 LOGFILE=install.log
 
 export DEBIAN_FRONTEND=noninteractive
@@ -16,7 +17,7 @@ reloadShProfile() {
     # Source sh profile
     printf "🌀 reload sh profile\n"
     source $HOME/.bashrc
-    source $HOME/.zshrc
+    source $HOME/.config/fish/config.fish
 }
 
 # Dummy sudo command for docker container without sudo
@@ -48,23 +49,26 @@ fi
 
 # Install base packages
 printf "📦 Install apt packages\n"
-sudo apt install -y zsh git locales unzip \
-    stow neovim tree jq httpie curl \
+sudo apt install -y fish git locales unzip \
+    stow tree jq httpie curl \
     build-essential cmake python3-dev python3-pip \
-    htop fzf silversearcher-ag timewarrior \
+    htop timewarrior \
     openjdk-8-jdk-headless openjdk-11-jdk-headless maven autojump \
     fonts-firacode inotify-tools jpegoptim \
     apt-transport-https ca-certificates gnupg libssl-dev \
     &>>$LOGFILE
 
 printf "📦 Install docker\n"
-sudo apt-get remove docker docker.io containerd runc
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+sudo apt-get remove docker docker-engine docker.io containerd runc &>>$LOGFILE
+sudo mkdir -m 0755 -p /etc/apt/keyrings &>>$LOGFILE
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg &>>$LOGFILE
+sudo chmod a+r /etc/apt/keyrings/docker.gpg &>>$LOGFILE
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-sudo apt update
-sudo apt intall -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo apt update &>>$LOGFILE
+sudo apt intall -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin &>>$LOGFILE
 
 # Configure locale
 printf "🌍 Configure locales\n"
@@ -81,17 +85,12 @@ printf "📦 Init and update submodules\n"
 git submodule init &>>$LOGFILE
 git submodule update &>>$LOGFILE
 
-# Link zsh p10k theme
-ln -sfn ~/dotfiles/zsh-extra/powerlevel10k ~/dotfiles/zsh/.oh-my-zsh/themes/
-
-# Link zsh-z plugin
-ln -sfn ~/dotfiles/zsh-extra/zsh-z ~/dotfiles/zsh/.oh-my-zsh/plugins/
 
 # Install dotfiles
 printf "📦 Stow dotfiles: bash git\n"
 pushd ~/dotfiles &>>$LOGFILE
 rm ../.bash* ../.profile &>>$LOGFILE
-stow zsh bash git space-vim &>>$LOGFILE
+stow bash git fish &>>$LOGFILE
 popd &>>$LOGFILE
 
 # Source bash profile
@@ -113,7 +112,8 @@ if [[ ! -d "/home/linuxbrew/.linuxbrew" ]]; then
 fi
 
 # Install brew deps
-brew install gcc go topgrade &>>$LOGFILE
+brew install fish gcc go topgrade fzf mdless the_silver_searcher oha rust nvm diff-so-fancy \
+kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap/redpanda &>>$LOGFILE
 
 # Install github cli
 printf "📦 Github cli\n"
@@ -121,16 +121,22 @@ if [[ ! $(which gh) ]]; then
     brew install gh &>>$LOGFILE
 fi
 
-# Install space-vim (http://vim.liuchengxu.org/)
-printf "📦 Install space-vim\n"
+# Install nvchad (http://vim.liuchengxu.org/)
+printf "📦 Install nvchad\n"
 if [[ -d $HOME/.config/nvim ]]; then
     printf "$HOME/.config/nvim already exists: SKIP\n"
 else
-    curl -fsSL https://raw.githubusercontent.com/liuchengxu/space-vim/master/install.sh | bash -s -- --all &>>$LOGFILE
-
-    pip3 install --upgrade pynvim
-    pip3 install --upgrade msgpack
+    rm -rf ~/.config/nvim ~/.local/share/nvim ~/.cache/nvim &>>$LOGFILE
+    git clone https://github.com/NvChad/NvChad ~/.config/nvim --depth 1 &>>$LOGFILE
 fi
+
+# Install neovim for root (aka sudo cmd)
+sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/nvim &>>$LOGFILE
+sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vim &>>$LOGFILE
+sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vi &>>$LOGFILE
+
+printf "📦 Stow config to user .config\n"
+stow config --target ~/.config &>>$LOGFILE
 
 printf "🏢 Install GUI tools? ${INSTALL_DEV_GUI_TOOLS}\n"
 if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
@@ -178,56 +184,32 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
     gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-right "[]"
 fi
 
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --no-modify-path -y
-
-# Install rust packages
-cargo install oha
-
-# Source bash profile
-reloadBashProfile
-
-if [[ -e $(which snap) ]]; then
-    # SNAP packages
-    printf "📦 snap packages\n"
-    sudo snap install mdless &>>$LOGFILE
-fi
-
-# Install n for managing Node versions (using npm)
-printf "📦 Install n\n"
-curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "$HOME/.fnm" --skip-shell &>>$LOGFILE
-
 # Source bash profile
 reloadBashProfile
 
 # Install nix-shell
 sh <(curl -L https://nixos.org/nix/install)
 
-# Upgrade node
-printf "📦 Install Node LTS using n\n"
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash &>>$LOGFILE
-
 # Source bash profile
 reloadBashProfile
 
 # Install node
+printf "📦 Install node lts\n"
 nvm install node --lts &>>$LOGFILE
+nvm use node --lts &>>$LOGFILE
 
-# Remove unused versions of node
-#printf "🚮 Clean Node installation using n\n"
-#n prune &>> $LOGFILE
+# Install pnpm
+printf "📦 Install pnpm\n"
+corepack enable
+corepack prepare pnpm@latest --activate
 
-# Install some global packages
-printf "📦 Install global npm packages\n"
-npm install -g yarn nodemon npm-check-updates moleculer-cli diff-so-fancy jwt-cli \
-    esbuild-runner vsce serve neovim firebase-tools vercel &>>$LOGFILE
+# Change default shell
+printf "📦 Change default shell to fish\n"
+grep -q '/home/linuxbrew/.linuxbrew/bin/fish' /etc/shells || echo '/home/linuxbrew/.linuxbrew/bin/fish' | sudo tee -a /etc/shells
+sudo chsh $USER -s $DEFAULT_SHELL &>>$LOGFILE
 
-#  Note completion
-npm completion >${HOME}/dotfiles/bash/.bash_completion.d/npm
-
-# Install kubernetes tools
-curl "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" --output ${HOME}/.local/bin/kubectl
-chmod +x ${HOME}/.local/bin/kubectl
+# Install fisher libs
+fisher install jorgebucaran/fisher jethrokuan/z jethrokuan/fzf jorgebucaran/nvm.fish
 
 # Print
 printf "✅ All done! \n"

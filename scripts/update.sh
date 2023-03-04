@@ -28,7 +28,4 @@ topgrade
 # flatpak update -y
 
 # Update commands completion
-printf "🌀 Update completion files\n"
-npm completion >${HOME}/dotfiles/bash/.bash_completion.d/npm
-fnm completions >${HOME}/dotfiles/bash/.bash_completion.d/fnm
-kubectl completion bash >${HOME}/dotfiles/bash/.bash_completion.d/kubectl
+# printf "🌀 Update completion files\n"

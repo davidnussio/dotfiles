@@ -1,0 +1,5682 @@
+# bash completion for rpk                                  -*- shell-script -*-
+
+__rpk_debug()
+{
+    if [[ -n ${BASH_COMP_DEBUG_FILE:-} ]]; then
+        echo "$*" >> "${BASH_COMP_DEBUG_FILE}"
+    fi
+}
+
+# Homebrew on Macs have version 1.3 of bash-completion which doesn't include
+# _init_completion. This is a very minimal version of that function.
+__rpk_init_completion()
+{
+    COMPREPLY=()
+    _get_comp_words_by_ref "$@" cur prev words cword
+}
+
+__rpk_index_of_word()
+{
+    local w word=$1
+    shift
+    index=0
+    for w in "$@"; do
+        [[ $w = "$word" ]] && return
+        index=$((index+1))
+    done
+    index=-1
+}
+
+__rpk_contains_word()
+{
+    local w word=$1; shift
+    for w in "$@"; do
+        [[ $w = "$word" ]] && return
+    done
+    return 1
+}
+
+__rpk_handle_go_custom_completion()
+{
+    __rpk_debug "${FUNCNAME[0]}: cur is ${cur}, words[*] is ${words[*]}, #words[@] is ${#words[@]}"
+
+    local shellCompDirectiveError=1
+    local shellCompDirectiveNoSpace=2
+    local shellCompDirectiveNoFileComp=4
+    local shellCompDirectiveFilterFileExt=8
+    local shellCompDirectiveFilterDirs=16
+
+    local out requestComp lastParam lastChar comp directive args
+
+    # Prepare the command to request completions for the program.
+    # Calling ${words[0]} instead of directly rpk allows to handle aliases
+    args=("${words[@]:1}")
+    # Disable ActiveHelp which is not supported for bash completion v1
+    requestComp="RPK_ACTIVE_HELP=0 ${words[0]} __completeNoDesc ${args[*]}"
+
+    lastParam=${words[$((${#words[@]}-1))]}
+    lastChar=${lastParam:$((${#lastParam}-1)):1}
+    __rpk_debug "${FUNCNAME[0]}: lastParam ${lastParam}, lastChar ${lastChar}"
+
+    if [ -z "${cur}" ] && [ "${lastChar}" != "=" ]; then
+        # If the last parameter is complete (there is a space following it)
+        # We add an extra empty parameter so we can indicate this to the go method.
+        __rpk_debug "${FUNCNAME[0]}: Adding extra empty parameter"
+        requestComp="${requestComp} \"\""
+    fi
+
+    __rpk_debug "${FUNCNAME[0]}: calling ${requestComp}"
+    # Use eval to handle any environment variables and such
+    out=$(eval "${requestComp}" 2>/dev/null)
+
+    # Extract the directive integer at the very end of the output following a colon (:)
+    directive=${out##*:}
+    # Remove the directive
+    out=${out%:*}
+    if [ "${directive}" = "${out}" ]; then
+        # There is not directive specified
+        directive=0
+    fi
+    __rpk_debug "${FUNCNAME[0]}: the completion directive is: ${directive}"
+    __rpk_debug "${FUNCNAME[0]}: the completions are: ${out}"
+
+    if [ $((directive & shellCompDirectiveError)) -ne 0 ]; then
+        # Error code.  No completion.
+        __rpk_debug "${FUNCNAME[0]}: received error from custom completion go code"
+        return
+    else
+        if [ $((directive & shellCompDirectiveNoSpace)) -ne 0 ]; then
+            if [[ $(type -t compopt) = "builtin" ]]; then
+                __rpk_debug "${FUNCNAME[0]}: activating no space"
+                compopt -o nospace
+            fi
+        fi
+        if [ $((directive & shellCompDirectiveNoFileComp)) -ne 0 ]; then
+            if [[ $(type -t compopt) = "builtin" ]]; then
+                __rpk_debug "${FUNCNAME[0]}: activating no file completion"
+                compopt +o default
+            fi
+        fi
+    fi
+
+    if [ $((directive & shellCompDirectiveFilterFileExt)) -ne 0 ]; then
+        # File extension filtering
+        local fullFilter filter filteringCmd
+        # Do not use quotes around the $out variable or else newline
+        # characters will be kept.
+        for filter in ${out}; do
+            fullFilter+="$filter|"
+        done
+
+        filteringCmd="_filedir $fullFilter"
+        __rpk_debug "File filtering command: $filteringCmd"
+        $filteringCmd
+    elif [ $((directive & shellCompDirectiveFilterDirs)) -ne 0 ]; then
+        # File completion for directories only
+        local subdir
+        # Use printf to strip any trailing newline
+        subdir=$(printf "%s" "${out}")
+        if [ -n "$subdir" ]; then
+            __rpk_debug "Listing directories in $subdir"
+            __rpk_handle_subdirs_in_dir_flag "$subdir"
+        else
+            __rpk_debug "Listing directories in ."
+            _filedir -d
+        fi
+    else
+        while IFS='' read -r comp; do
+            COMPREPLY+=("$comp")
+        done < <(compgen -W "${out}" -- "$cur")
+    fi
+}
+
+__rpk_handle_reply()
+{
+    __rpk_debug "${FUNCNAME[0]}"
+    local comp
+    case $cur in
+        -*)
+            if [[ $(type -t compopt) = "builtin" ]]; then
+                compopt -o nospace
+            fi
+            local allflags
+            if [ ${#must_have_one_flag[@]} -ne 0 ]; then
+                allflags=("${must_have_one_flag[@]}")
+            else
+                allflags=("${flags[*]} ${two_word_flags[*]}")
+            fi
+            while IFS='' read -r comp; do
+                COMPREPLY+=("$comp")
+            done < <(compgen -W "${allflags[*]}" -- "$cur")
+            if [[ $(type -t compopt) = "builtin" ]]; then
+                [[ "${COMPREPLY[0]}" == *= ]] || compopt +o nospace
+            fi
+
+            # complete after --flag=abc
+            if [[ $cur == *=* ]]; then
+                if [[ $(type -t compopt) = "builtin" ]]; then
+                    compopt +o nospace
+                fi
+
+                local index flag
+                flag="${cur%=*}"
+                __rpk_index_of_word "${flag}" "${flags_with_completion[@]}"
+                COMPREPLY=()
+                if [[ ${index} -ge 0 ]]; then
+                    PREFIX=""
+                    cur="${cur#*=}"
+                    ${flags_completion[${index}]}
+                    if [ -n "${ZSH_VERSION:-}" ]; then
+                        # zsh completion needs --flag= prefix
+                        eval "COMPREPLY=( \"\${COMPREPLY[@]/#/${flag}=}\" )"
+                    fi
+                fi
+            fi
+
+            if [[ -z "${flag_parsing_disabled}" ]]; then
+                # If flag parsing is enabled, we have completed the flags and can return.
+                # If flag parsing is disabled, we may not know all (or any) of the flags, so we fallthrough
+                # to possibly call handle_go_custom_completion.
+                return 0;
+            fi
+            ;;
+    esac
+
+    # check if we are handling a flag with special work handling
+    local index
+    __rpk_index_of_word "${prev}" "${flags_with_completion[@]}"
+    if [[ ${index} -ge 0 ]]; then
+        ${flags_completion[${index}]}
+        return
+    fi
+
+    # we are parsing a flag and don't have a special handler, no completion
+    if [[ ${cur} != "${words[cword]}" ]]; then
+        return
+    fi
+
+    local completions
+    completions=("${commands[@]}")
+    if [[ ${#must_have_one_noun[@]} -ne 0 ]]; then
+        completions+=("${must_have_one_noun[@]}")
+    elif [[ -n "${has_completion_function}" ]]; then
+        # if a go completion function is provided, defer to that function
+        __rpk_handle_go_custom_completion
+    fi
+    if [[ ${#must_have_one_flag[@]} -ne 0 ]]; then
+        completions+=("${must_have_one_flag[@]}")
+    fi
+    while IFS='' read -r comp; do
+        COMPREPLY+=("$comp")
+    done < <(compgen -W "${completions[*]}" -- "$cur")
+
+    if [[ ${#COMPREPLY[@]} -eq 0 && ${#noun_aliases[@]} -gt 0 && ${#must_have_one_noun[@]} -ne 0 ]]; then
+        while IFS='' read -r comp; do
+            COMPREPLY+=("$comp")
+        done < <(compgen -W "${noun_aliases[*]}" -- "$cur")
+    fi
+
+    if [[ ${#COMPREPLY[@]} -eq 0 ]]; then
+        if declare -F __rpk_custom_func >/dev/null; then
+            # try command name qualified custom func
+            __rpk_custom_func
+        else
+            # otherwise fall back to unqualified for compatibility
+            declare -F __custom_func >/dev/null && __custom_func
+        fi
+    fi
+
+    # available in bash-completion >= 2, not always present on macOS
+    if declare -F __ltrim_colon_completions >/dev/null; then
+        __ltrim_colon_completions "$cur"
+    fi
+
+    # If there is only 1 completion and it is a flag with an = it will be completed
+    # but we don't want a space after the =
+    if [[ "${#COMPREPLY[@]}" -eq "1" ]] && [[ $(type -t compopt) = "builtin" ]] && [[ "${COMPREPLY[0]}" == --*= ]]; then
+       compopt -o nospace
+    fi
+}
+
+# The arguments should be in the form "ext1|ext2|extn"
+__rpk_handle_filename_extension_flag()
+{
+    local ext="$1"
+    _filedir "@(${ext})"
+}
+
+__rpk_handle_subdirs_in_dir_flag()
+{
+    local dir="$1"
+    pushd "${dir}" >/dev/null 2>&1 && _filedir -d && popd >/dev/null 2>&1 || return
+}
+
+__rpk_handle_flag()
+{
+    __rpk_debug "${FUNCNAME[0]}: c is $c words[c] is ${words[c]}"
+
+    # if a command required a flag, and we found it, unset must_have_one_flag()
+    local flagname=${words[c]}
+    local flagvalue=""
+    # if the word contained an =
+    if [[ ${words[c]} == *"="* ]]; then
+        flagvalue=${flagname#*=} # take in as flagvalue after the =
+        flagname=${flagname%=*} # strip everything after the =
+        flagname="${flagname}=" # but put the = back
+    fi
+    __rpk_debug "${FUNCNAME[0]}: looking for ${flagname}"
+    if __rpk_contains_word "${flagname}" "${must_have_one_flag[@]}"; then
+        must_have_one_flag=()
+    fi
+
+    # if you set a flag which only applies to this command, don't show subcommands
+    if __rpk_contains_word "${flagname}" "${local_nonpersistent_flags[@]}"; then
+      commands=()
+    fi
+
+    # keep flag value with flagname as flaghash
+    # flaghash variable is an associative array which is only supported in bash > 3.
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        if [ -n "${flagvalue}" ] ; then
+            flaghash[${flagname}]=${flagvalue}
+        elif [ -n "${words[ $((c+1)) ]}" ] ; then
+            flaghash[${flagname}]=${words[ $((c+1)) ]}
+        else
+            flaghash[${flagname}]="true" # pad "true" for bool flag
+        fi
+    fi
+
+    # skip the argument to a two word flag
+    if [[ ${words[c]} != *"="* ]] && __rpk_contains_word "${words[c]}" "${two_word_flags[@]}"; then
+        __rpk_debug "${FUNCNAME[0]}: found a flag ${words[c]}, skip the next argument"
+        c=$((c+1))
+        # if we are looking for a flags value, don't show commands
+        if [[ $c -eq $cword ]]; then
+            commands=()
+        fi
+    fi
+
+    c=$((c+1))
+
+}
+
+__rpk_handle_noun()
+{
+    __rpk_debug "${FUNCNAME[0]}: c is $c words[c] is ${words[c]}"
+
+    if __rpk_contains_word "${words[c]}" "${must_have_one_noun[@]}"; then
+        must_have_one_noun=()
+    elif __rpk_contains_word "${words[c]}" "${noun_aliases[@]}"; then
+        must_have_one_noun=()
+    fi
+
+    nouns+=("${words[c]}")
+    c=$((c+1))
+}
+
+__rpk_handle_command()
+{
+    __rpk_debug "${FUNCNAME[0]}: c is $c words[c] is ${words[c]}"
+
+    local next_command
+    if [[ -n ${last_command} ]]; then
+        next_command="_${last_command}_${words[c]//:/__}"
+    else
+        if [[ $c -eq 0 ]]; then
+            next_command="_rpk_root_command"
+        else
+            next_command="_${words[c]//:/__}"
+        fi
+    fi
+    c=$((c+1))
+    __rpk_debug "${FUNCNAME[0]}: looking for ${next_command}"
+    declare -F "$next_command" >/dev/null && $next_command
+}
+
+__rpk_handle_word()
+{
+    if [[ $c -ge $cword ]]; then
+        __rpk_handle_reply
+        return
+    fi
+    __rpk_debug "${FUNCNAME[0]}: c is $c words[c] is ${words[c]}"
+    if [[ "${words[c]}" == -* ]]; then
+        __rpk_handle_flag
+    elif __rpk_contains_word "${words[c]}" "${commands[@]}"; then
+        __rpk_handle_command
+    elif [[ $c -eq 0 ]]; then
+        __rpk_handle_command
+    elif __rpk_contains_word "${words[c]}" "${command_aliases[@]}"; then
+        # aliashash variable is an associative array which is only supported in bash > 3.
+        if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+            words[c]=${aliashash[${words[c]}]}
+            __rpk_handle_command
+        else
+            __rpk_handle_noun
+        fi
+    else
+        __rpk_handle_noun
+    fi
+    __rpk_handle_word
+}
+
+_rpk_acl_create()
+{
+    last_command="rpk_acl_create"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--allow-host=")
+    two_word_flags+=("--allow-host")
+    local_nonpersistent_flags+=("--allow-host")
+    local_nonpersistent_flags+=("--allow-host=")
+    flags+=("--allow-principal=")
+    two_word_flags+=("--allow-principal")
+    local_nonpersistent_flags+=("--allow-principal")
+    local_nonpersistent_flags+=("--allow-principal=")
+    flags+=("--cluster")
+    local_nonpersistent_flags+=("--cluster")
+    flags+=("--deny-host=")
+    two_word_flags+=("--deny-host")
+    local_nonpersistent_flags+=("--deny-host")
+    local_nonpersistent_flags+=("--deny-host=")
+    flags+=("--deny-principal=")
+    two_word_flags+=("--deny-principal")
+    local_nonpersistent_flags+=("--deny-principal")
+    local_nonpersistent_flags+=("--deny-principal=")
+    flags+=("--group=")
+    two_word_flags+=("--group")
+    local_nonpersistent_flags+=("--group")
+    local_nonpersistent_flags+=("--group=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--operation=")
+    two_word_flags+=("--operation")
+    local_nonpersistent_flags+=("--operation")
+    local_nonpersistent_flags+=("--operation=")
+    flags+=("--resource-pattern-type=")
+    two_word_flags+=("--resource-pattern-type")
+    local_nonpersistent_flags+=("--resource-pattern-type")
+    local_nonpersistent_flags+=("--resource-pattern-type=")
+    flags+=("--topic=")
+    two_word_flags+=("--topic")
+    local_nonpersistent_flags+=("--topic")
+    local_nonpersistent_flags+=("--topic=")
+    flags+=("--transactional-id=")
+    two_word_flags+=("--transactional-id")
+    local_nonpersistent_flags+=("--transactional-id")
+    local_nonpersistent_flags+=("--transactional-id=")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_acl_delete()
+{
+    last_command="rpk_acl_delete"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--allow-host=")
+    two_word_flags+=("--allow-host")
+    local_nonpersistent_flags+=("--allow-host")
+    local_nonpersistent_flags+=("--allow-host=")
+    flags+=("--allow-principal=")
+    two_word_flags+=("--allow-principal")
+    local_nonpersistent_flags+=("--allow-principal")
+    local_nonpersistent_flags+=("--allow-principal=")
+    flags+=("--cluster")
+    local_nonpersistent_flags+=("--cluster")
+    flags+=("--deny-host=")
+    two_word_flags+=("--deny-host")
+    local_nonpersistent_flags+=("--deny-host")
+    local_nonpersistent_flags+=("--deny-host=")
+    flags+=("--deny-principal=")
+    two_word_flags+=("--deny-principal")
+    local_nonpersistent_flags+=("--deny-principal")
+    local_nonpersistent_flags+=("--deny-principal=")
+    flags+=("--dry")
+    flags+=("-d")
+    local_nonpersistent_flags+=("--dry")
+    local_nonpersistent_flags+=("-d")
+    flags+=("--group=")
+    two_word_flags+=("--group")
+    local_nonpersistent_flags+=("--group")
+    local_nonpersistent_flags+=("--group=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--no-confirm")
+    local_nonpersistent_flags+=("--no-confirm")
+    flags+=("--operation=")
+    two_word_flags+=("--operation")
+    local_nonpersistent_flags+=("--operation")
+    local_nonpersistent_flags+=("--operation=")
+    flags+=("--print-filters")
+    flags+=("-f")
+    local_nonpersistent_flags+=("--print-filters")
+    local_nonpersistent_flags+=("-f")
+    flags+=("--resource-pattern-type=")
+    two_word_flags+=("--resource-pattern-type")
+    local_nonpersistent_flags+=("--resource-pattern-type")
+    local_nonpersistent_flags+=("--resource-pattern-type=")
+    flags+=("--topic=")
+    two_word_flags+=("--topic")
+    local_nonpersistent_flags+=("--topic")
+    local_nonpersistent_flags+=("--topic=")
+    flags+=("--transactional-id=")
+    two_word_flags+=("--transactional-id")
+    local_nonpersistent_flags+=("--transactional-id")
+    local_nonpersistent_flags+=("--transactional-id=")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_acl_list()
+{
+    last_command="rpk_acl_list"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--allow-host=")
+    two_word_flags+=("--allow-host")
+    local_nonpersistent_flags+=("--allow-host")
+    local_nonpersistent_flags+=("--allow-host=")
+    flags+=("--allow-principal=")
+    two_word_flags+=("--allow-principal")
+    local_nonpersistent_flags+=("--allow-principal")
+    local_nonpersistent_flags+=("--allow-principal=")
+    flags+=("--cluster")
+    local_nonpersistent_flags+=("--cluster")
+    flags+=("--deny-host=")
+    two_word_flags+=("--deny-host")
+    local_nonpersistent_flags+=("--deny-host")
+    local_nonpersistent_flags+=("--deny-host=")
+    flags+=("--deny-principal=")
+    two_word_flags+=("--deny-principal")
+    local_nonpersistent_flags+=("--deny-principal")
+    local_nonpersistent_flags+=("--deny-principal=")
+    flags+=("--group=")
+    two_word_flags+=("--group")
+    local_nonpersistent_flags+=("--group")
+    local_nonpersistent_flags+=("--group=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--operation=")
+    two_word_flags+=("--operation")
+    local_nonpersistent_flags+=("--operation")
+    local_nonpersistent_flags+=("--operation=")
+    flags+=("--print-filters")
+    flags+=("-f")
+    local_nonpersistent_flags+=("--print-filters")
+    local_nonpersistent_flags+=("-f")
+    flags+=("--resource-pattern-type=")
+    two_word_flags+=("--resource-pattern-type")
+    local_nonpersistent_flags+=("--resource-pattern-type")
+    local_nonpersistent_flags+=("--resource-pattern-type=")
+    flags+=("--topic=")
+    two_word_flags+=("--topic")
+    local_nonpersistent_flags+=("--topic")
+    local_nonpersistent_flags+=("--topic=")
+    flags+=("--transactional-id=")
+    two_word_flags+=("--transactional-id")
+    local_nonpersistent_flags+=("--transactional-id")
+    local_nonpersistent_flags+=("--transactional-id=")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_acl_user_create()
+{
+    last_command="rpk_acl_user_create"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--mechanism=")
+    two_word_flags+=("--mechanism")
+    local_nonpersistent_flags+=("--mechanism")
+    local_nonpersistent_flags+=("--mechanism=")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    local_nonpersistent_flags+=("--password")
+    local_nonpersistent_flags+=("--password=")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_acl_user_delete()
+{
+    last_command="rpk_acl_user_delete"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_acl_user_list()
+{
+    last_command="rpk_acl_user_list"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_acl_user()
+{
+    last_command="rpk_acl_user"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("create")
+    commands+=("delete")
+    commands+=("list")
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        command_aliases+=("ls")
+        aliashash["ls"]="list"
+    fi
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_acl()
+{
+    last_command="rpk_acl"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("create")
+    commands+=("delete")
+    commands+=("list")
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        command_aliases+=("describe")
+        aliashash["describe"]="list"
+        command_aliases+=("ls")
+        aliashash["ls"]="list"
+    fi
+    commands+=("user")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--help-operations")
+    local_nonpersistent_flags+=("--help-operations")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cloud_byoc_install()
+{
+    last_command="rpk_cloud_byoc_install"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--client-id=")
+    two_word_flags+=("--client-id")
+    local_nonpersistent_flags+=("--client-id")
+    local_nonpersistent_flags+=("--client-id=")
+    flags+=("--client-secret=")
+    two_word_flags+=("--client-secret")
+    local_nonpersistent_flags+=("--client-secret")
+    local_nonpersistent_flags+=("--client-secret=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--redpanda-id=")
+    two_word_flags+=("--redpanda-id")
+    local_nonpersistent_flags+=("--redpanda-id")
+    local_nonpersistent_flags+=("--redpanda-id=")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_flag+=("--redpanda-id=")
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cloud_byoc_uninstall()
+{
+    last_command="rpk_cloud_byoc_uninstall"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cloud_byoc()
+{
+    last_command="rpk_cloud_byoc"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("install")
+    commands+=("uninstall")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flag_parsing_disabled=1
+    flags+=("--client-id=")
+    two_word_flags+=("--client-id")
+    local_nonpersistent_flags+=("--client-id")
+    local_nonpersistent_flags+=("--client-id=")
+    flags+=("--client-secret=")
+    two_word_flags+=("--client-secret")
+    local_nonpersistent_flags+=("--client-secret")
+    local_nonpersistent_flags+=("--client-secret=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cloud_login()
+{
+    last_command="rpk_cloud_login"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--client-id=")
+    two_word_flags+=("--client-id")
+    local_nonpersistent_flags+=("--client-id")
+    local_nonpersistent_flags+=("--client-id=")
+    flags+=("--client-secret=")
+    two_word_flags+=("--client-secret")
+    local_nonpersistent_flags+=("--client-secret")
+    local_nonpersistent_flags+=("--client-secret=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--save")
+    local_nonpersistent_flags+=("--save")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cloud_logout()
+{
+    last_command="rpk_cloud_logout"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--clear-credentials")
+    flags+=("-c")
+    local_nonpersistent_flags+=("--clear-credentials")
+    local_nonpersistent_flags+=("-c")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cloud()
+{
+    last_command="rpk_cloud"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("byoc")
+    commands+=("login")
+    commands+=("logout")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_config_edit()
+{
+    last_command="rpk_cluster_config_edit"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--all")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_config_export()
+{
+    last_command="rpk_cluster_config_export"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--filename=")
+    two_word_flags+=("--filename")
+    two_word_flags+=("-f")
+    local_nonpersistent_flags+=("--filename")
+    local_nonpersistent_flags+=("--filename=")
+    local_nonpersistent_flags+=("-f")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--all")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_config_force-reset()
+{
+    last_command="rpk_cluster_config_force-reset"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--cache-file=")
+    two_word_flags+=("--cache-file")
+    local_nonpersistent_flags+=("--cache-file")
+    local_nonpersistent_flags+=("--cache-file=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--all")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_config_get()
+{
+    last_command="rpk_cluster_config_get"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--all")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_config_import()
+{
+    last_command="rpk_cluster_config_import"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--filename=")
+    two_word_flags+=("--filename")
+    two_word_flags+=("-f")
+    local_nonpersistent_flags+=("--filename")
+    local_nonpersistent_flags+=("--filename=")
+    local_nonpersistent_flags+=("-f")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--all")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_config_lint()
+{
+    last_command="rpk_cluster_config_lint"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--all")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_config_set()
+{
+    last_command="rpk_cluster_config_set"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--all")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_config_status()
+{
+    last_command="rpk_cluster_config_status"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--all")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_config()
+{
+    last_command="rpk_cluster_config"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("edit")
+    commands+=("export")
+    commands+=("force-reset")
+    commands+=("get")
+    commands+=("import")
+    commands+=("lint")
+    commands+=("set")
+    commands+=("status")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--all")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_health()
+{
+    last_command="rpk_cluster_health"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--exit-when-healthy")
+    flags+=("-e")
+    local_nonpersistent_flags+=("--exit-when-healthy")
+    local_nonpersistent_flags+=("-e")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--watch")
+    flags+=("-w")
+    local_nonpersistent_flags+=("--watch")
+    local_nonpersistent_flags+=("-w")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_license_info()
+{
+    last_command="rpk_cluster_license_info"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--format=")
+    two_word_flags+=("--format")
+    local_nonpersistent_flags+=("--format")
+    local_nonpersistent_flags+=("--format=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_license_set()
+{
+    last_command="rpk_cluster_license_set"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--path=")
+    two_word_flags+=("--path")
+    local_nonpersistent_flags+=("--path")
+    local_nonpersistent_flags+=("--path=")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_license()
+{
+    last_command="rpk_cluster_license"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("info")
+    commands+=("set")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_logdirs_describe()
+{
+    last_command="rpk_cluster_logdirs_describe"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--aggregate-into=")
+    two_word_flags+=("--aggregate-into")
+    local_nonpersistent_flags+=("--aggregate-into")
+    local_nonpersistent_flags+=("--aggregate-into=")
+    flags+=("--broker=")
+    two_word_flags+=("--broker")
+    two_word_flags+=("-b")
+    local_nonpersistent_flags+=("--broker")
+    local_nonpersistent_flags+=("--broker=")
+    local_nonpersistent_flags+=("-b")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--sort-by-size")
+    local_nonpersistent_flags+=("--sort-by-size")
+    flags+=("--topics=")
+    two_word_flags+=("--topics")
+    local_nonpersistent_flags+=("--topics")
+    local_nonpersistent_flags+=("--topics=")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_logdirs()
+{
+    last_command="rpk_cluster_logdirs"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("describe")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_maintenance_disable()
+{
+    last_command="rpk_cluster_maintenance_disable"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_maintenance_enable()
+{
+    last_command="rpk_cluster_maintenance_enable"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--wait")
+    flags+=("-w")
+    local_nonpersistent_flags+=("--wait")
+    local_nonpersistent_flags+=("-w")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_maintenance_status()
+{
+    last_command="rpk_cluster_maintenance_status"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_maintenance()
+{
+    last_command="rpk_cluster_maintenance"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("disable")
+    commands+=("enable")
+    commands+=("status")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_metadata()
+{
+    last_command="rpk_cluster_metadata"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--print-brokers")
+    flags+=("-b")
+    local_nonpersistent_flags+=("--print-brokers")
+    local_nonpersistent_flags+=("-b")
+    flags+=("--print-cluster")
+    flags+=("-c")
+    local_nonpersistent_flags+=("--print-cluster")
+    local_nonpersistent_flags+=("-c")
+    flags+=("--print-detailed-topics")
+    flags+=("-d")
+    local_nonpersistent_flags+=("--print-detailed-topics")
+    local_nonpersistent_flags+=("-d")
+    flags+=("--print-internal-topics")
+    flags+=("-i")
+    local_nonpersistent_flags+=("--print-internal-topics")
+    local_nonpersistent_flags+=("-i")
+    flags+=("--print-topics")
+    flags+=("-t")
+    local_nonpersistent_flags+=("--print-topics")
+    local_nonpersistent_flags+=("-t")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_partitions_balancer-status()
+{
+    last_command="rpk_cluster_partitions_balancer-status"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_partitions_movement-cancel()
+{
+    last_command="rpk_cluster_partitions_movement-cancel"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--no-confirm")
+    local_nonpersistent_flags+=("--no-confirm")
+    flags+=("--node=")
+    two_word_flags+=("--node")
+    local_nonpersistent_flags+=("--node")
+    local_nonpersistent_flags+=("--node=")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_partitions()
+{
+    last_command="rpk_cluster_partitions"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("balancer-status")
+    commands+=("movement-cancel")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_self-test_start()
+{
+    last_command="rpk_cluster_self-test_start"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--disk-duration-ms=")
+    two_word_flags+=("--disk-duration-ms")
+    local_nonpersistent_flags+=("--disk-duration-ms")
+    local_nonpersistent_flags+=("--disk-duration-ms=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--network-duration-ms=")
+    two_word_flags+=("--network-duration-ms")
+    local_nonpersistent_flags+=("--network-duration-ms")
+    local_nonpersistent_flags+=("--network-duration-ms=")
+    flags+=("--no-confirm")
+    local_nonpersistent_flags+=("--no-confirm")
+    flags+=("--only-disk-test")
+    local_nonpersistent_flags+=("--only-disk-test")
+    flags+=("--only-network-test")
+    local_nonpersistent_flags+=("--only-network-test")
+    flags+=("--participant-node-ids=")
+    two_word_flags+=("--participant-node-ids")
+    local_nonpersistent_flags+=("--participant-node-ids")
+    local_nonpersistent_flags+=("--participant-node-ids=")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_self-test_status()
+{
+    last_command="rpk_cluster_self-test_status"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--format=")
+    two_word_flags+=("--format")
+    local_nonpersistent_flags+=("--format")
+    local_nonpersistent_flags+=("--format=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_self-test_stop()
+{
+    last_command="rpk_cluster_self-test_stop"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_self-test()
+{
+    last_command="rpk_cluster_self-test"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("start")
+    commands+=("status")
+    commands+=("stop")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_storage_recovery_start()
+{
+    last_command="rpk_cluster_storage_recovery_start"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--polling-interval=")
+    two_word_flags+=("--polling-interval")
+    local_nonpersistent_flags+=("--polling-interval")
+    local_nonpersistent_flags+=("--polling-interval=")
+    flags+=("--topic-name-pattern=")
+    two_word_flags+=("--topic-name-pattern")
+    local_nonpersistent_flags+=("--topic-name-pattern")
+    local_nonpersistent_flags+=("--topic-name-pattern=")
+    flags+=("--wait")
+    flags+=("-w")
+    local_nonpersistent_flags+=("--wait")
+    local_nonpersistent_flags+=("-w")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_storage_recovery_start()
+{
+    last_command="rpk_cluster_storage_recovery_start"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_storage_recovery()
+{
+    last_command="rpk_cluster_storage_recovery"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("start")
+    commands+=("start")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster_storage()
+{
+    last_command="rpk_cluster_storage"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("recovery")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_cluster()
+{
+    last_command="rpk_cluster"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("config")
+    commands+=("health")
+    commands+=("license")
+    commands+=("logdirs")
+    commands+=("maintenance")
+    commands+=("metadata")
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        command_aliases+=("info")
+        aliashash["info"]="metadata"
+        command_aliases+=("status")
+        aliashash["status"]="metadata"
+    fi
+    commands+=("partitions")
+    commands+=("self-test")
+    commands+=("storage")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_container_purge()
+{
+    last_command="rpk_container_purge"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_container_start()
+{
+    last_command="rpk_container_start"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--nodes=")
+    two_word_flags+=("--nodes")
+    two_word_flags+=("-n")
+    local_nonpersistent_flags+=("--nodes")
+    local_nonpersistent_flags+=("--nodes=")
+    local_nonpersistent_flags+=("-n")
+    flags+=("--retries=")
+    two_word_flags+=("--retries")
+    local_nonpersistent_flags+=("--retries")
+    local_nonpersistent_flags+=("--retries=")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_container_status()
+{
+    last_command="rpk_container_status"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_container_stop()
+{
+    last_command="rpk_container_stop"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_container()
+{
+    last_command="rpk_container"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("purge")
+    commands+=("start")
+    commands+=("status")
+    commands+=("stop")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_debug_bundle()
+{
+    last_command="rpk_debug_bundle"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--api-urls=")
+    two_word_flags+=("--api-urls")
+    local_nonpersistent_flags+=("--api-urls")
+    local_nonpersistent_flags+=("--api-urls=")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--controller-logs-size-limit=")
+    two_word_flags+=("--controller-logs-size-limit")
+    local_nonpersistent_flags+=("--controller-logs-size-limit")
+    local_nonpersistent_flags+=("--controller-logs-size-limit=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--logs-since=")
+    two_word_flags+=("--logs-since")
+    local_nonpersistent_flags+=("--logs-since")
+    local_nonpersistent_flags+=("--logs-since=")
+    flags+=("--logs-size-limit=")
+    two_word_flags+=("--logs-size-limit")
+    local_nonpersistent_flags+=("--logs-size-limit")
+    local_nonpersistent_flags+=("--logs-size-limit=")
+    flags+=("--logs-until=")
+    two_word_flags+=("--logs-until")
+    local_nonpersistent_flags+=("--logs-until")
+    local_nonpersistent_flags+=("--logs-until=")
+    flags+=("--metrics-interval=")
+    two_word_flags+=("--metrics-interval")
+    local_nonpersistent_flags+=("--metrics-interval")
+    local_nonpersistent_flags+=("--metrics-interval=")
+    flags+=("--namespace=")
+    two_word_flags+=("--namespace")
+    two_word_flags+=("-n")
+    local_nonpersistent_flags+=("--namespace")
+    local_nonpersistent_flags+=("--namespace=")
+    local_nonpersistent_flags+=("-n")
+    flags+=("--output=")
+    two_word_flags+=("--output")
+    two_word_flags+=("-o")
+    local_nonpersistent_flags+=("--output")
+    local_nonpersistent_flags+=("--output=")
+    local_nonpersistent_flags+=("-o")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--timeout=")
+    two_word_flags+=("--timeout")
+    local_nonpersistent_flags+=("--timeout")
+    local_nonpersistent_flags+=("--timeout=")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--upload-url=")
+    two_word_flags+=("--upload-url")
+    local_nonpersistent_flags+=("--upload-url")
+    local_nonpersistent_flags+=("--upload-url=")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_debug()
+{
+    last_command="rpk_debug"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("bundle")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_generate_grafana-dashboard()
+{
+    last_command="rpk_generate_grafana-dashboard"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--datasource=")
+    two_word_flags+=("--datasource")
+    local_nonpersistent_flags+=("--datasource")
+    local_nonpersistent_flags+=("--datasource=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--job-name=")
+    two_word_flags+=("--job-name")
+    local_nonpersistent_flags+=("--job-name")
+    local_nonpersistent_flags+=("--job-name=")
+    flags+=("--metrics-endpoint=")
+    two_word_flags+=("--metrics-endpoint")
+    local_nonpersistent_flags+=("--metrics-endpoint")
+    local_nonpersistent_flags+=("--metrics-endpoint=")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_flag+=("--datasource=")
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_generate_prometheus-config()
+{
+    last_command="rpk_generate_prometheus-config"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    local_nonpersistent_flags+=("--config")
+    local_nonpersistent_flags+=("--config=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--internal-metrics")
+    local_nonpersistent_flags+=("--internal-metrics")
+    flags+=("--job-name=")
+    two_word_flags+=("--job-name")
+    local_nonpersistent_flags+=("--job-name")
+    local_nonpersistent_flags+=("--job-name=")
+    flags+=("--node-addrs=")
+    two_word_flags+=("--node-addrs")
+    local_nonpersistent_flags+=("--node-addrs")
+    local_nonpersistent_flags+=("--node-addrs=")
+    flags+=("--seed-addr=")
+    two_word_flags+=("--seed-addr")
+    local_nonpersistent_flags+=("--seed-addr")
+    local_nonpersistent_flags+=("--seed-addr=")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_generate_shell-completion()
+{
+    last_command="rpk_generate_shell-completion"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_generate()
+{
+    last_command="rpk_generate"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("grafana-dashboard")
+    commands+=("prometheus-config")
+    commands+=("shell-completion")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_group_delete()
+{
+    last_command="rpk_group_delete"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_group_describe()
+{
+    last_command="rpk_group_describe"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--print-summary")
+    flags+=("-s")
+    local_nonpersistent_flags+=("--print-summary")
+    local_nonpersistent_flags+=("-s")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_group_list()
+{
+    last_command="rpk_group_list"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_group_offset-delete()
+{
+    last_command="rpk_group_offset-delete"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--from-file=")
+    two_word_flags+=("--from-file")
+    two_word_flags+=("-f")
+    local_nonpersistent_flags+=("--from-file")
+    local_nonpersistent_flags+=("--from-file=")
+    local_nonpersistent_flags+=("-f")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--topic=")
+    two_word_flags+=("--topic")
+    two_word_flags+=("-t")
+    local_nonpersistent_flags+=("--topic")
+    local_nonpersistent_flags+=("--topic=")
+    local_nonpersistent_flags+=("-t")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_group_seek()
+{
+    last_command="rpk_group_seek"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--allow-new-topics")
+    local_nonpersistent_flags+=("--allow-new-topics")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--to=")
+    two_word_flags+=("--to")
+    local_nonpersistent_flags+=("--to")
+    local_nonpersistent_flags+=("--to=")
+    flags+=("--to-file=")
+    two_word_flags+=("--to-file")
+    local_nonpersistent_flags+=("--to-file")
+    local_nonpersistent_flags+=("--to-file=")
+    flags+=("--to-group=")
+    two_word_flags+=("--to-group")
+    local_nonpersistent_flags+=("--to-group")
+    local_nonpersistent_flags+=("--to-group=")
+    flags+=("--topics=")
+    two_word_flags+=("--topics")
+    local_nonpersistent_flags+=("--topics")
+    local_nonpersistent_flags+=("--topics=")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_group()
+{
+    last_command="rpk_group"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("delete")
+    commands+=("describe")
+    commands+=("list")
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        command_aliases+=("ls")
+        aliashash["ls"]="list"
+    fi
+    commands+=("offset-delete")
+    commands+=("seek")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_help()
+{
+    last_command="rpk_help"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    has_completion_function=1
+    noun_aliases=()
+}
+
+_rpk_iotune()
+{
+    last_command="rpk_iotune"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    local_nonpersistent_flags+=("--config")
+    local_nonpersistent_flags+=("--config=")
+    flags+=("--directories=")
+    two_word_flags+=("--directories")
+    local_nonpersistent_flags+=("--directories")
+    local_nonpersistent_flags+=("--directories=")
+    flags+=("--duration=")
+    two_word_flags+=("--duration")
+    local_nonpersistent_flags+=("--duration")
+    local_nonpersistent_flags+=("--duration=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--no-confirm")
+    local_nonpersistent_flags+=("--no-confirm")
+    flags+=("--out=")
+    two_word_flags+=("--out")
+    local_nonpersistent_flags+=("--out")
+    local_nonpersistent_flags+=("--out=")
+    flags+=("--timeout=")
+    two_word_flags+=("--timeout")
+    local_nonpersistent_flags+=("--timeout")
+    local_nonpersistent_flags+=("--timeout=")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_plugin_install()
+{
+    last_command="rpk_plugin_install"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--dir=")
+    two_word_flags+=("--dir")
+    local_nonpersistent_flags+=("--dir")
+    local_nonpersistent_flags+=("--dir=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--update")
+    flags+=("-u")
+    local_nonpersistent_flags+=("--update")
+    local_nonpersistent_flags+=("-u")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_plugin_list()
+{
+    last_command="rpk_plugin_list"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--local")
+    flags+=("-l")
+    local_nonpersistent_flags+=("--local")
+    local_nonpersistent_flags+=("-l")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_plugin_uninstall()
+{
+    last_command="rpk_plugin_uninstall"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--include-shadowed")
+    local_nonpersistent_flags+=("--include-shadowed")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_plugin()
+{
+    last_command="rpk_plugin"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("install")
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        command_aliases+=("download")
+        aliashash["download"]="install"
+    fi
+    commands+=("list")
+    commands+=("uninstall")
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        command_aliases+=("rm")
+        aliashash["rm"]="uninstall"
+    fi
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_admin_brokers_decommission()
+{
+    last_command="rpk_redpanda_admin_brokers_decommission"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--hosts=")
+    two_word_flags+=("--hosts")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_admin_brokers_decommission-status()
+{
+    last_command="rpk_redpanda_admin_brokers_decommission-status"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--detailed")
+    flags+=("-d")
+    local_nonpersistent_flags+=("--detailed")
+    local_nonpersistent_flags+=("-d")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--hosts=")
+    two_word_flags+=("--hosts")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_admin_brokers_list()
+{
+    last_command="rpk_redpanda_admin_brokers_list"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--hosts=")
+    two_word_flags+=("--hosts")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_admin_brokers_recommission()
+{
+    last_command="rpk_redpanda_admin_brokers_recommission"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--hosts=")
+    two_word_flags+=("--hosts")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_admin_brokers()
+{
+    last_command="rpk_redpanda_admin_brokers"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("decommission")
+    commands+=("decommission-status")
+    commands+=("list")
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        command_aliases+=("ls")
+        aliashash["ls"]="list"
+    fi
+    commands+=("recommission")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--hosts=")
+    two_word_flags+=("--hosts")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_admin_config_log-level_set()
+{
+    last_command="rpk_redpanda_admin_config_log-level_set"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--expiry-seconds=")
+    two_word_flags+=("--expiry-seconds")
+    two_word_flags+=("-e")
+    local_nonpersistent_flags+=("--expiry-seconds")
+    local_nonpersistent_flags+=("--expiry-seconds=")
+    local_nonpersistent_flags+=("-e")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    local_nonpersistent_flags+=("--host")
+    local_nonpersistent_flags+=("--host=")
+    flags+=("--level=")
+    two_word_flags+=("--level")
+    two_word_flags+=("-l")
+    local_nonpersistent_flags+=("--level")
+    local_nonpersistent_flags+=("--level=")
+    local_nonpersistent_flags+=("-l")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--hosts=")
+    two_word_flags+=("--hosts")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_flag+=("--host=")
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_admin_config_log-level()
+{
+    last_command="rpk_redpanda_admin_config_log-level"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("set")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--hosts=")
+    two_word_flags+=("--hosts")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_admin_config_print()
+{
+    last_command="rpk_redpanda_admin_config_print"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    local_nonpersistent_flags+=("--host")
+    local_nonpersistent_flags+=("--host=")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--hosts=")
+    two_word_flags+=("--hosts")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_flag+=("--host=")
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_admin_config()
+{
+    last_command="rpk_redpanda_admin_config"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("log-level")
+    commands+=("print")
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        command_aliases+=("display")
+        aliashash["display"]="print"
+        command_aliases+=("dump")
+        aliashash["dump"]="print"
+        command_aliases+=("list")
+        aliashash["list"]="print"
+        command_aliases+=("ls")
+        aliashash["ls"]="print"
+    fi
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--hosts=")
+    two_word_flags+=("--hosts")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_admin_partitions_list()
+{
+    last_command="rpk_redpanda_admin_partitions_list"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--leader-only")
+    flags+=("-l")
+    local_nonpersistent_flags+=("--leader-only")
+    local_nonpersistent_flags+=("-l")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--hosts=")
+    two_word_flags+=("--hosts")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_admin_partitions()
+{
+    last_command="rpk_redpanda_admin_partitions"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("list")
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        command_aliases+=("ls")
+        aliashash["ls"]="list"
+    fi
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--hosts=")
+    two_word_flags+=("--hosts")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_admin()
+{
+    last_command="rpk_redpanda_admin"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("brokers")
+    commands+=("config")
+    commands+=("partitions")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-api-tls-cert=")
+    two_word_flags+=("--admin-api-tls-cert")
+    flags+=("--admin-api-tls-enabled")
+    flags+=("--admin-api-tls-key=")
+    two_word_flags+=("--admin-api-tls-key")
+    flags+=("--admin-api-tls-truststore=")
+    two_word_flags+=("--admin-api-tls-truststore")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--hosts=")
+    two_word_flags+=("--hosts")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_check()
+{
+    last_command="rpk_redpanda_check"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    local_nonpersistent_flags+=("--config")
+    local_nonpersistent_flags+=("--config=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--timeout=")
+    two_word_flags+=("--timeout")
+    local_nonpersistent_flags+=("--timeout")
+    local_nonpersistent_flags+=("--timeout=")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_config_bootstrap()
+{
+    last_command="rpk_redpanda_config_bootstrap"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    local_nonpersistent_flags+=("--config")
+    local_nonpersistent_flags+=("--config=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--ips=")
+    two_word_flags+=("--ips")
+    local_nonpersistent_flags+=("--ips")
+    local_nonpersistent_flags+=("--ips=")
+    flags+=("--self=")
+    two_word_flags+=("--self")
+    local_nonpersistent_flags+=("--self")
+    local_nonpersistent_flags+=("--self=")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_config_init()
+{
+    last_command="rpk_redpanda_config_init"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    local_nonpersistent_flags+=("--config")
+    local_nonpersistent_flags+=("--config=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_config_set()
+{
+    last_command="rpk_redpanda_config_set"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    local_nonpersistent_flags+=("--config")
+    local_nonpersistent_flags+=("--config=")
+    flags+=("--format=")
+    two_word_flags+=("--format")
+    local_nonpersistent_flags+=("--format")
+    local_nonpersistent_flags+=("--format=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_config()
+{
+    last_command="rpk_redpanda_config"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("bootstrap")
+    commands+=("init")
+    commands+=("set")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_mode()
+{
+    last_command="rpk_redpanda_mode"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    local_nonpersistent_flags+=("--config")
+    local_nonpersistent_flags+=("--config=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_start()
+{
+    last_command="rpk_redpanda_start"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--advertise-kafka-addr=")
+    two_word_flags+=("--advertise-kafka-addr")
+    local_nonpersistent_flags+=("--advertise-kafka-addr")
+    local_nonpersistent_flags+=("--advertise-kafka-addr=")
+    flags+=("--advertise-pandaproxy-addr=")
+    two_word_flags+=("--advertise-pandaproxy-addr")
+    local_nonpersistent_flags+=("--advertise-pandaproxy-addr")
+    local_nonpersistent_flags+=("--advertise-pandaproxy-addr=")
+    flags+=("--advertise-rpc-addr=")
+    two_word_flags+=("--advertise-rpc-addr")
+    local_nonpersistent_flags+=("--advertise-rpc-addr")
+    local_nonpersistent_flags+=("--advertise-rpc-addr=")
+    flags+=("--check")
+    local_nonpersistent_flags+=("--check")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    local_nonpersistent_flags+=("--config")
+    local_nonpersistent_flags+=("--config=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--install-dir=")
+    two_word_flags+=("--install-dir")
+    local_nonpersistent_flags+=("--install-dir")
+    local_nonpersistent_flags+=("--install-dir=")
+    flags+=("--kafka-addr=")
+    two_word_flags+=("--kafka-addr")
+    local_nonpersistent_flags+=("--kafka-addr")
+    local_nonpersistent_flags+=("--kafka-addr=")
+    flags+=("--mode=")
+    two_word_flags+=("--mode")
+    local_nonpersistent_flags+=("--mode")
+    local_nonpersistent_flags+=("--mode=")
+    flags+=("--pandaproxy-addr=")
+    two_word_flags+=("--pandaproxy-addr")
+    local_nonpersistent_flags+=("--pandaproxy-addr")
+    local_nonpersistent_flags+=("--pandaproxy-addr=")
+    flags+=("--rpc-addr=")
+    two_word_flags+=("--rpc-addr")
+    local_nonpersistent_flags+=("--rpc-addr")
+    local_nonpersistent_flags+=("--rpc-addr=")
+    flags+=("--schema-registry-addr=")
+    two_word_flags+=("--schema-registry-addr")
+    local_nonpersistent_flags+=("--schema-registry-addr")
+    local_nonpersistent_flags+=("--schema-registry-addr=")
+    flags+=("--seeds=")
+    two_word_flags+=("--seeds")
+    two_word_flags+=("-s")
+    local_nonpersistent_flags+=("--seeds")
+    local_nonpersistent_flags+=("--seeds=")
+    local_nonpersistent_flags+=("-s")
+    flags+=("--timeout=")
+    two_word_flags+=("--timeout")
+    local_nonpersistent_flags+=("--timeout")
+    local_nonpersistent_flags+=("--timeout=")
+    flags+=("--tune")
+    local_nonpersistent_flags+=("--tune")
+    flags+=("--well-known-io=")
+    two_word_flags+=("--well-known-io")
+    local_nonpersistent_flags+=("--well-known-io")
+    local_nonpersistent_flags+=("--well-known-io=")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_stop()
+{
+    last_command="rpk_redpanda_stop"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    local_nonpersistent_flags+=("--config")
+    local_nonpersistent_flags+=("--config=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--timeout=")
+    two_word_flags+=("--timeout")
+    local_nonpersistent_flags+=("--timeout")
+    local_nonpersistent_flags+=("--timeout=")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_tune_help()
+{
+    last_command="rpk_redpanda_tune_help"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_tune_list()
+{
+    last_command="rpk_redpanda_tune_list"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    local_nonpersistent_flags+=("--config")
+    local_nonpersistent_flags+=("--config=")
+    flags+=("--dirs=")
+    two_word_flags+=("--dirs")
+    two_word_flags+=("-r")
+    local_nonpersistent_flags+=("--dirs")
+    local_nonpersistent_flags+=("--dirs=")
+    local_nonpersistent_flags+=("-r")
+    flags+=("--disks=")
+    two_word_flags+=("--disks")
+    two_word_flags+=("-d")
+    local_nonpersistent_flags+=("--disks")
+    local_nonpersistent_flags+=("--disks=")
+    local_nonpersistent_flags+=("-d")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--mode=")
+    two_word_flags+=("--mode")
+    two_word_flags+=("-m")
+    local_nonpersistent_flags+=("--mode")
+    local_nonpersistent_flags+=("--mode=")
+    local_nonpersistent_flags+=("-m")
+    flags+=("--nic=")
+    two_word_flags+=("--nic")
+    two_word_flags+=("-n")
+    local_nonpersistent_flags+=("--nic")
+    local_nonpersistent_flags+=("--nic=")
+    local_nonpersistent_flags+=("-n")
+    flags+=("--reboot-allowed")
+    local_nonpersistent_flags+=("--reboot-allowed")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda_tune()
+{
+    last_command="rpk_redpanda_tune"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("help")
+    commands+=("list")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    local_nonpersistent_flags+=("--config")
+    local_nonpersistent_flags+=("--config=")
+    flags+=("--cpu-set=")
+    two_word_flags+=("--cpu-set")
+    local_nonpersistent_flags+=("--cpu-set")
+    local_nonpersistent_flags+=("--cpu-set=")
+    flags+=("--dirs=")
+    two_word_flags+=("--dirs")
+    two_word_flags+=("-r")
+    local_nonpersistent_flags+=("--dirs")
+    local_nonpersistent_flags+=("--dirs=")
+    local_nonpersistent_flags+=("-r")
+    flags+=("--disks=")
+    two_word_flags+=("--disks")
+    two_word_flags+=("-d")
+    local_nonpersistent_flags+=("--disks")
+    local_nonpersistent_flags+=("--disks=")
+    local_nonpersistent_flags+=("-d")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--mode=")
+    two_word_flags+=("--mode")
+    two_word_flags+=("-m")
+    local_nonpersistent_flags+=("--mode")
+    local_nonpersistent_flags+=("--mode=")
+    local_nonpersistent_flags+=("-m")
+    flags+=("--nic=")
+    two_word_flags+=("--nic")
+    two_word_flags+=("-n")
+    local_nonpersistent_flags+=("--nic")
+    local_nonpersistent_flags+=("--nic=")
+    local_nonpersistent_flags+=("-n")
+    flags+=("--output-script=")
+    two_word_flags+=("--output-script")
+    local_nonpersistent_flags+=("--output-script")
+    local_nonpersistent_flags+=("--output-script=")
+    flags+=("--reboot-allowed")
+    local_nonpersistent_flags+=("--reboot-allowed")
+    flags+=("--timeout=")
+    two_word_flags+=("--timeout")
+    local_nonpersistent_flags+=("--timeout")
+    local_nonpersistent_flags+=("--timeout=")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_redpanda()
+{
+    last_command="rpk_redpanda"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("admin")
+    commands+=("check")
+    commands+=("config")
+    commands+=("mode")
+    commands+=("start")
+    commands+=("stop")
+    commands+=("tune")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_topic_add-partitions()
+{
+    last_command="rpk_topic_add-partitions"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--force")
+    flags+=("-f")
+    local_nonpersistent_flags+=("--force")
+    local_nonpersistent_flags+=("-f")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--num=")
+    two_word_flags+=("--num")
+    two_word_flags+=("-n")
+    local_nonpersistent_flags+=("--num")
+    local_nonpersistent_flags+=("--num=")
+    local_nonpersistent_flags+=("-n")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_topic_alter-config()
+{
+    last_command="rpk_topic_alter-config"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--append=")
+    two_word_flags+=("--append")
+    local_nonpersistent_flags+=("--append")
+    local_nonpersistent_flags+=("--append=")
+    flags+=("--delete=")
+    two_word_flags+=("--delete")
+    two_word_flags+=("-d")
+    local_nonpersistent_flags+=("--delete")
+    local_nonpersistent_flags+=("--delete=")
+    local_nonpersistent_flags+=("-d")
+    flags+=("--dry")
+    local_nonpersistent_flags+=("--dry")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--set=")
+    two_word_flags+=("--set")
+    two_word_flags+=("-s")
+    local_nonpersistent_flags+=("--set")
+    local_nonpersistent_flags+=("--set=")
+    local_nonpersistent_flags+=("-s")
+    flags+=("--subtract=")
+    two_word_flags+=("--subtract")
+    local_nonpersistent_flags+=("--subtract")
+    local_nonpersistent_flags+=("--subtract=")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_topic_consume()
+{
+    last_command="rpk_topic_consume"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--balancer=")
+    two_word_flags+=("--balancer")
+    two_word_flags+=("-b")
+    local_nonpersistent_flags+=("--balancer")
+    local_nonpersistent_flags+=("--balancer=")
+    local_nonpersistent_flags+=("-b")
+    flags+=("--fetch-max-bytes=")
+    two_word_flags+=("--fetch-max-bytes")
+    local_nonpersistent_flags+=("--fetch-max-bytes")
+    local_nonpersistent_flags+=("--fetch-max-bytes=")
+    flags+=("--fetch-max-wait=")
+    two_word_flags+=("--fetch-max-wait")
+    local_nonpersistent_flags+=("--fetch-max-wait")
+    local_nonpersistent_flags+=("--fetch-max-wait=")
+    flags+=("--format=")
+    two_word_flags+=("--format")
+    two_word_flags+=("-f")
+    local_nonpersistent_flags+=("--format")
+    local_nonpersistent_flags+=("--format=")
+    local_nonpersistent_flags+=("-f")
+    flags+=("--group=")
+    two_word_flags+=("--group")
+    two_word_flags+=("-g")
+    local_nonpersistent_flags+=("--group")
+    local_nonpersistent_flags+=("--group=")
+    local_nonpersistent_flags+=("-g")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--meta-only")
+    local_nonpersistent_flags+=("--meta-only")
+    flags+=("--num=")
+    two_word_flags+=("--num")
+    two_word_flags+=("-n")
+    local_nonpersistent_flags+=("--num")
+    local_nonpersistent_flags+=("--num=")
+    local_nonpersistent_flags+=("-n")
+    flags+=("--offset=")
+    two_word_flags+=("--offset")
+    two_word_flags+=("-o")
+    local_nonpersistent_flags+=("--offset")
+    local_nonpersistent_flags+=("--offset=")
+    local_nonpersistent_flags+=("-o")
+    flags+=("--partitions=")
+    two_word_flags+=("--partitions")
+    two_word_flags+=("-p")
+    local_nonpersistent_flags+=("--partitions")
+    local_nonpersistent_flags+=("--partitions=")
+    local_nonpersistent_flags+=("-p")
+    flags+=("--pretty-print")
+    local_nonpersistent_flags+=("--pretty-print")
+    flags+=("--print-control-records")
+    local_nonpersistent_flags+=("--print-control-records")
+    flags+=("--read-committed")
+    local_nonpersistent_flags+=("--read-committed")
+    flags+=("--regex")
+    flags+=("-r")
+    local_nonpersistent_flags+=("--regex")
+    local_nonpersistent_flags+=("-r")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_topic_create()
+{
+    last_command="rpk_topic_create"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--dry")
+    flags+=("-d")
+    local_nonpersistent_flags+=("--dry")
+    local_nonpersistent_flags+=("-d")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--partitions=")
+    two_word_flags+=("--partitions")
+    two_word_flags+=("-p")
+    local_nonpersistent_flags+=("--partitions")
+    local_nonpersistent_flags+=("--partitions=")
+    local_nonpersistent_flags+=("-p")
+    flags+=("--replicas=")
+    two_word_flags+=("--replicas")
+    two_word_flags+=("-r")
+    local_nonpersistent_flags+=("--replicas")
+    local_nonpersistent_flags+=("--replicas=")
+    local_nonpersistent_flags+=("-r")
+    flags+=("--topic-config=")
+    two_word_flags+=("--topic-config")
+    two_word_flags+=("-c")
+    local_nonpersistent_flags+=("--topic-config")
+    local_nonpersistent_flags+=("--topic-config=")
+    local_nonpersistent_flags+=("-c")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_topic_delete()
+{
+    last_command="rpk_topic_delete"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--regex")
+    flags+=("-r")
+    local_nonpersistent_flags+=("--regex")
+    local_nonpersistent_flags+=("-r")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_topic_describe()
+{
+    last_command="rpk_topic_describe"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--print-all")
+    flags+=("-a")
+    local_nonpersistent_flags+=("--print-all")
+    local_nonpersistent_flags+=("-a")
+    flags+=("--print-configs")
+    flags+=("-c")
+    local_nonpersistent_flags+=("--print-configs")
+    local_nonpersistent_flags+=("-c")
+    flags+=("--print-partitions")
+    flags+=("-p")
+    local_nonpersistent_flags+=("--print-partitions")
+    local_nonpersistent_flags+=("-p")
+    flags+=("--print-summary")
+    flags+=("-s")
+    local_nonpersistent_flags+=("--print-summary")
+    local_nonpersistent_flags+=("-s")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_topic_list()
+{
+    last_command="rpk_topic_list"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--detailed")
+    flags+=("-d")
+    local_nonpersistent_flags+=("--detailed")
+    local_nonpersistent_flags+=("-d")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--internal")
+    flags+=("-i")
+    local_nonpersistent_flags+=("--internal")
+    local_nonpersistent_flags+=("-i")
+    flags+=("--regex")
+    flags+=("-r")
+    local_nonpersistent_flags+=("--regex")
+    local_nonpersistent_flags+=("-r")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_topic_produce()
+{
+    last_command="rpk_topic_produce"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--acks=")
+    two_word_flags+=("--acks")
+    local_nonpersistent_flags+=("--acks")
+    local_nonpersistent_flags+=("--acks=")
+    flags+=("--allow-auto-topic-creation")
+    local_nonpersistent_flags+=("--allow-auto-topic-creation")
+    flags+=("--compression=")
+    two_word_flags+=("--compression")
+    two_word_flags+=("-z")
+    local_nonpersistent_flags+=("--compression")
+    local_nonpersistent_flags+=("--compression=")
+    local_nonpersistent_flags+=("-z")
+    flags+=("--delivery-timeout=")
+    two_word_flags+=("--delivery-timeout")
+    local_nonpersistent_flags+=("--delivery-timeout")
+    local_nonpersistent_flags+=("--delivery-timeout=")
+    flags+=("--format=")
+    two_word_flags+=("--format")
+    two_word_flags+=("-f")
+    local_nonpersistent_flags+=("--format")
+    local_nonpersistent_flags+=("--format=")
+    local_nonpersistent_flags+=("-f")
+    flags+=("--header=")
+    two_word_flags+=("--header")
+    two_word_flags+=("-H")
+    local_nonpersistent_flags+=("--header")
+    local_nonpersistent_flags+=("--header=")
+    local_nonpersistent_flags+=("-H")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--key=")
+    two_word_flags+=("--key")
+    two_word_flags+=("-k")
+    local_nonpersistent_flags+=("--key")
+    local_nonpersistent_flags+=("--key=")
+    local_nonpersistent_flags+=("-k")
+    flags+=("--max-message-bytes=")
+    two_word_flags+=("--max-message-bytes")
+    local_nonpersistent_flags+=("--max-message-bytes")
+    local_nonpersistent_flags+=("--max-message-bytes=")
+    flags+=("--output-format=")
+    two_word_flags+=("--output-format")
+    two_word_flags+=("-o")
+    local_nonpersistent_flags+=("--output-format")
+    local_nonpersistent_flags+=("--output-format=")
+    local_nonpersistent_flags+=("-o")
+    flags+=("--partition=")
+    two_word_flags+=("--partition")
+    two_word_flags+=("-p")
+    local_nonpersistent_flags+=("--partition")
+    local_nonpersistent_flags+=("--partition=")
+    local_nonpersistent_flags+=("-p")
+    flags+=("--tombstone")
+    flags+=("-Z")
+    local_nonpersistent_flags+=("--tombstone")
+    local_nonpersistent_flags+=("-Z")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_topic()
+{
+    last_command="rpk_topic"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("add-partitions")
+    commands+=("alter-config")
+    commands+=("consume")
+    commands+=("create")
+    commands+=("delete")
+    commands+=("describe")
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        command_aliases+=("info")
+        aliashash["info"]="describe"
+    fi
+    commands+=("list")
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        command_aliases+=("ls")
+        aliashash["ls"]="list"
+    fi
+    commands+=("produce")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_version()
+{
+    last_command="rpk_version"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_wasm_deploy()
+{
+    last_command="rpk_wasm_deploy"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--description=")
+    two_word_flags+=("--description")
+    local_nonpersistent_flags+=("--description")
+    local_nonpersistent_flags+=("--description=")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--name=")
+    two_word_flags+=("--name")
+    local_nonpersistent_flags+=("--name")
+    local_nonpersistent_flags+=("--name=")
+    flags+=("--type=")
+    two_word_flags+=("--type")
+    local_nonpersistent_flags+=("--type")
+    local_nonpersistent_flags+=("--type=")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_flag+=("--name=")
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_wasm_generate()
+{
+    last_command="rpk_wasm_generate"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--skip-version")
+    local_nonpersistent_flags+=("--skip-version")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_wasm_remove()
+{
+    last_command="rpk_wasm_remove"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--type=")
+    two_word_flags+=("--type")
+    local_nonpersistent_flags+=("--type")
+    local_nonpersistent_flags+=("--type=")
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_wasm()
+{
+    last_command="rpk_wasm"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("deploy")
+    commands+=("generate")
+    commands+=("remove")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--brokers=")
+    two_word_flags+=("--brokers")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--password=")
+    two_word_flags+=("--password")
+    flags+=("--sasl-mechanism=")
+    two_word_flags+=("--sasl-mechanism")
+    flags+=("--tls-cert=")
+    two_word_flags+=("--tls-cert")
+    flags+=("--tls-enabled")
+    flags+=("--tls-key=")
+    two_word_flags+=("--tls-key")
+    flags+=("--tls-truststore=")
+    two_word_flags+=("--tls-truststore")
+    flags+=("--user=")
+    two_word_flags+=("--user")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_rpk_root_command()
+{
+    last_command="rpk"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("acl")
+    commands+=("cloud")
+    commands+=("cluster")
+    commands+=("container")
+    commands+=("debug")
+    commands+=("generate")
+    commands+=("group")
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
+        command_aliases+=("g")
+        aliashash["g"]="group"
+    fi
+    commands+=("help")
+    commands+=("iotune")
+    commands+=("plugin")
+    commands+=("redpanda")
+    commands+=("topic")
+    commands+=("version")
+    commands+=("wasm")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--help")
+    flags+=("-h")
+    local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
+    flags+=("--verbose")
+    flags+=("-v")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+__start_rpk()
+{
+    local cur prev words cword split
+    declare -A flaghash 2>/dev/null || :
+    declare -A aliashash 2>/dev/null || :
+    if declare -F _init_completion >/dev/null 2>&1; then
+        _init_completion -s || return
+    else
+        __rpk_init_completion -n "=" || return
+    fi
+
+    local c=0
+    local flag_parsing_disabled=
+    local flags=()
+    local two_word_flags=()
+    local local_nonpersistent_flags=()
+    local flags_with_completion=()
+    local flags_completion=()
+    local commands=("rpk")
+    local command_aliases=()
+    local must_have_one_flag=()
+    local must_have_one_noun=()
+    local has_completion_function=""
+    local last_command=""
+    local nouns=()
+    local noun_aliases=()
+
+    __rpk_handle_word
+}
+
+if [[ $(type -t compopt) = "builtin" ]]; then
+    complete -o default -F __start_rpk rpk
+else
+    complete -o default -o nospace -F __start_rpk rpk
+fi
+
+# ex: ts=4 sw=4 et filetype=sh

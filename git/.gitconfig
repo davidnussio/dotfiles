@@ -16,26 +16,26 @@
 [commit]
   verbose = true
 [core]
-	excludesfile = /home/david/.gitignore
-	editor = vim
+  excludesfile = /home/david/.gitignore
+  editor = nvim
 [merge]
-	tool = meld
+  tool = meld
 [push]
-	default = current
+  default = current
 [alias]
-	lg1 = log --graph --abbrev-commit --decorate --date=relative --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
-	lg2 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)' --all
-	lg = !"git lg1"
-	dsf = "!f() { [ -z \"$GIT_PREFIX\" ] || cd \"$GIT_PREFIX\" && git diff --color \"$@\" | diff-so-fancy  | less --tabs=4 -RFX; }; f"
-    ignore = "!gi() { curl -L -s https://www.gitignore.io/api/$@ ;}; gi"
-    hide = "!git update-index --assume-unchanged"
-    unhide = "!git update-index --no-assume-unchanged"
-    hidden  = "!git ls-files -v | grep ^[hsS] | cut -c 3-"
+  lg1 = log --graph --abbrev-commit --decorate --date=relative --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
+  lg2 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)' --all
+  lg = !"git lg1"
+  dsf = "!f() { [ -z \"$GIT_PREFIX\" ] || cd \"$GIT_PREFIX\" && git diff --color \"$@\" | diff-so-fancy  | less --tabs=4 -RFX; }; f"
+  ignore = "!gi() { curl -L -s https://www.gitignore.io/api/$@ ;}; gi"
+  hide = "!git update-index --assume-unchanged"
+  unhide = "!git update-index --no-assume-unchanged"
+  hidden  = "!git ls-files -v | grep ^[hsS] | cut -c 3-"
 [gui]
-	editor = code
+  editor = code
 [help]
-	autocorrect = 1
+  autocorrect = 1
 [pull]
-	rebase = false
+  rebase = false
 [init]
-	defaultBranch = main
+  defaultBranch = main
