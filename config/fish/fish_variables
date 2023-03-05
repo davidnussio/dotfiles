@@ -12,11 +12,12 @@ SETUVAR Z_DATA:/home/david/\x2elocal/share/z/data
 SETUVAR Z_DATA_DIR:/home/david/\x2elocal/share/z
 SETUVAR Z_EXCLUDE:\x5e/home/david\x24
 SETUVAR __fish_initialized:3400
+SETUVAR _fisher_edc_2F_bass_files:\x7e/\x2econfig/fish/functions/__bass\x2epy\x1e\x7e/\x2econfig/fish/functions/bass\x2efish
+SETUVAR _fisher_fabioantunes_2F_fish_2D_nvm_files:\x7e/\x2econfig/fish/functions/__nvm_run\x2efish\x1e\x7e/\x2econfig/fish/functions/node\x2efish\x1e\x7e/\x2econfig/fish/functions/npm\x2efish\x1e\x7e/\x2econfig/fish/functions/npx\x2efish\x1e\x7e/\x2econfig/fish/functions/nvm\x2efish\x1e\x7e/\x2econfig/fish/functions/nvm_alias_command\x2efish\x1e\x7e/\x2econfig/fish/functions/nvm_alias_function\x2efish\x1e\x7e/\x2econfig/fish/functions/yarn\x2efish\x1e\x7e/\x2econfig/fish/completions/nvm\x2efish
 SETUVAR _fisher_jethrokuan_2F_fzf_files:\x7e/\x2econfig/fish/functions/__fzf_cd\x2efish\x1e\x7e/\x2econfig/fish/functions/__fzf_complete\x2efish\x1e\x7e/\x2econfig/fish/functions/__fzf_complete_preview\x2efish\x1e\x7e/\x2econfig/fish/functions/__fzf_find_file\x2efish\x1e\x7e/\x2econfig/fish/functions/__fzf_get_dir\x2efish\x1e\x7e/\x2econfig/fish/functions/__fzf_open\x2efish\x1e\x7e/\x2econfig/fish/functions/__fzf_parse_commandline\x2efish\x1e\x7e/\x2econfig/fish/functions/__fzf_reverse_isearch\x2efish\x1e\x7e/\x2econfig/fish/functions/__fzfcmd\x2efish\x1e\x7e/\x2econfig/fish/conf\x2ed/fzf\x2efish
 SETUVAR _fisher_jethrokuan_2F_z_files:\x7e/\x2econfig/fish/functions/__z\x2efish\x1e\x7e/\x2econfig/fish/functions/__z_add\x2efish\x1e\x7e/\x2econfig/fish/functions/__z_clean\x2efish\x1e\x7e/\x2econfig/fish/functions/__z_complete\x2efish\x1e\x7e/\x2econfig/fish/conf\x2ed/z\x2efish
 SETUVAR _fisher_jorgebucaran_2F_fisher_files:\x7e/\x2econfig/fish/functions/fisher\x2efish\x1e\x7e/\x2econfig/fish/completions/fisher\x2efish
-SETUVAR _fisher_jorgebucaran_2F_nvm_2E_fish_files:\x7e/\x2econfig/fish/functions/_nvm_index_update\x2efish\x1e\x7e/\x2econfig/fish/functions/_nvm_list\x2efish\x1e\x7e/\x2econfig/fish/functions/_nvm_version_activate\x2efish\x1e\x7e/\x2econfig/fish/functions/_nvm_version_deactivate\x2efish\x1e\x7e/\x2econfig/fish/functions/nvm\x2efish\x1e\x7e/\x2econfig/fish/conf\x2ed/nvm\x2efish\x1e\x7e/\x2econfig/fish/completions/nvm\x2efish
-SETUVAR _fisher_plugins:jethrokuan/z\x1ejethrokuan/fzf\x1ejorgebucaran/fisher\x1ejorgebucaran/nvm\x2efish
+SETUVAR _fisher_plugins:jethrokuan/z\x1ejethrokuan/fzf\x1ejorgebucaran/fisher\x1efabioantunes/fish\x2dnvm\x1eedc/bass
 SETUVAR _fisher_upgraded_to_4_4:\x1d
 SETUVAR fish_color_autosuggestion:555\x1ebrblack
 SETUVAR fish_color_cancel:\x2dr
@@ -46,5 +47,3 @@ SETUVAR fish_pager_color_description:B3A06D\x1eyellow\x1e\x2di
 SETUVAR fish_pager_color_prefix:normal\x1e\x2d\x2dbold\x1e\x2d\x2dunderline
 SETUVAR fish_pager_color_progress:brwhite\x1e\x2d\x2dbackground\x3dcyan
 SETUVAR fish_pager_color_selected_background:\x2dr
-SETUVAR nvm_data:/home/david/\x2elocal/share/nvm
-SETUVAR nvm_mirror:https\x3a//nodejs\x2eorg/dist
