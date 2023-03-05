@@ -1,6 +1,6 @@
 if status is-interactive
   # Add brew path
-  fish_add_path -g /home/linuxbrew/.linuxbrew/bin
+  /home/linuxbrew/.linuxbrew/bin/brew shellenv | source
 
   # Commands to run in interactive sessions can go here
   starship init fish | source
