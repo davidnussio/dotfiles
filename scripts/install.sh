@@ -36,7 +36,7 @@ command -v sudo >/dev/null 2>&1 || { alias sudo='dummySudo'; }
 printf "👑 Electing user\n"
 sudo -v
 
-# printf "🔄 Updating system\n"
+printf "🔄 Updating system\n"
 sudo apt update &>>$LOGFILE && sudo apt full-upgrade -y &>>$LOGFILE
 
 # Configure watches
