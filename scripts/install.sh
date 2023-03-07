@@ -90,7 +90,7 @@ git submodule update &>>$LOGFILE
 printf "📦 Stow dotfiles: bash git\n"
 pushd ~/dotfiles &>>$LOGFILE
 rm ../.bash* ../.profile &>>$LOGFILE
-stow bash git fish &>>$LOGFILE
+stow git fish &>>$LOGFILE
 popd &>>$LOGFILE
 
 # Source bash profile
@@ -114,6 +114,11 @@ fi
 # Install brew deps
 brew install fish gcc go topgrade fzf mdless the_silver_searcher oha rust nvm diff-so-fancy \
 kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap/redpanda &>>$LOGFILE
+
+# Install links to use integrated fish shell
+# FabioAntunes/fish-nvm edc/bass
+ln -sf /home/linuxbrew/.linuxbrew/opt/nvm/nvm.sh ~/.nvm/nvm.sh
+ln -sf /home/linuxbrew/.linuxbrew/opt/nvm/nvm-exec ~/.nvm/nvm-exec
 
 # Install github cli
 printf "📦 Github cli\n"
