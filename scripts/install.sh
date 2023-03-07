@@ -117,6 +117,7 @@ kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap
 
 # Install links to use integrated fish shell
 # FabioAntunes/fish-nvm edc/bass
+mkdir -p ~/.nvm
 ln -sf /home/linuxbrew/.linuxbrew/opt/nvm/nvm.sh ~/.nvm/nvm.sh
 ln -sf /home/linuxbrew/.linuxbrew/opt/nvm/nvm-exec ~/.nvm/nvm-exec
 
