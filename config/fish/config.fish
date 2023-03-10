@@ -14,9 +14,20 @@ if status is-interactive
 
   abbr -a efish nvim ~/.config/fish/config.fish
 
+  abbr -a npm-audit npm audit --registry https://registry.npmjs.org --omit dev
+  abbr -a npm-audit-all npm audit --registry https://registry.npmjs.org
+
+  alias git-last-version "git tag --list --sort=version:refname | tail -n 1"
+
   # Aliases
   alias agi='ag --ignore node_modules --ignore dist --ignore coverage --ignore test --ignore tests --ignore __test__ --ignore __mocks__'
   alias lst='tree -a -I "node_modules|.git|.next|dist|__generated__"'
 
+  # Vscode integration
+  string match -q "$TERM_PROGRAM" "vscode"
+  and . (code --locate-shell-integration-path fish)
 
+  # Load local fish config if it exists
+  test -e ~/.config/fish/config-local.fish
+  and . ~/.config/fish/config-local.fish
 end
