@@ -52,7 +52,8 @@ printf "📦 Install apt packages\n"
 sudo apt install -y fish git locales unzip \
     stow tree jq httpie curl zip \
     build-essential cmake python3-dev python3-pip \
-    htop timewarrior \
+    wl-clipboard htop timewarrior \
+    openjdk-8-jdk-headless openjdk-11-jdk-headless maven autojump \
     fonts-firacode inotify-tools jpegoptim \
     apt-transport-https ca-certificates gnupg libssl-dev \
     &>>$LOGFILE
