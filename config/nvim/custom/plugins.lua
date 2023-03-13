@@ -56,6 +56,12 @@ local plugins = {
     "folke/which-key.nvim",
     enabled = true,
   },
+
+  {
+    "github/copilot.vim",
+    lazy = false,
+    enabled = true,
+  }
 }
 
 return plugins

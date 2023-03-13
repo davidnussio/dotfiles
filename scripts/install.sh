@@ -113,7 +113,8 @@ fi
 
 # Install brew deps
 brew install fish gcc go topgrade fzf mdless the_silver_searcher oha rust nvm diff-so-fancy \
-kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap/redpanda &>>$LOGFILE
+kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap/redpanda \
+prettier deno &>>$LOGFILE
 
 # Install links to use integrated fish shell
 # FabioAntunes/fish-nvm edc/bass
@@ -140,6 +141,9 @@ fi
 sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/nvim &>>$LOGFILE
 sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vim &>>$LOGFILE
 sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vi &>>$LOGFILE
+
+printf ""
+git clone https://github.com/github/copilot.vim.git ~/.local/share/nvim/lazy/copilot.vim
 
 printf "📦 Stow config to user .config\n"
 stow config --target ~/.config &>>$LOGFILE
