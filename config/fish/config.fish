@@ -14,10 +14,8 @@ if status is-interactive
 
   abbr -a efish nvim ~/.config/fish/config.fish
 
-  abbr -a npm-audit npm audit --registry https://registry.npmjs.org --omit dev
+  # abbr -a npm-audit npm audit --registry https://registry.npmjs.org --omit dev
   abbr -a npm-audit-all npm audit --registry https://registry.npmjs.org
-
-  alias git-last-version "git tag --list --sort=version:refname | tail -n 1"
 
   alias icat "kitty +kitten icat" 
 
