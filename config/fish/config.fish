@@ -6,7 +6,7 @@ if status is-interactive
   starship init fish | source
 
   # Abbreviations
-  abbr -a reload source ~/.config/fish/config.fish
+  abbr -a fsource source ~/.config/fish/config.fish
   abbr -a o xdg-open
 
   abbr -a vi nvim
@@ -17,7 +17,9 @@ if status is-interactive
   # abbr -a npm-audit npm audit --registry https://registry.npmjs.org --omit dev
   abbr -a npm-audit-all npm audit --registry https://registry.npmjs.org
 
-  alias icat "kitty +kitten icat" 
+  alias icat "kitty +kitten icat"
+
+  alias reload "exec $SHELL -l"
 
   # Aliases
   alias agi='ag --ignore node_modules --ignore dist --ignore coverage --ignore test --ignore tests --ignore __test__ --ignore __mocks__'
