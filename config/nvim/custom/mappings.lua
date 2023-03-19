@@ -1,14 +1,18 @@
 --@type MappingsTable
 local M = {}
 
--- M.general = {
---   i = {
---     ["<C-K>"] = { "<ESC> ddi", "delete line"}
---   },
---   n = {
---     ["<C-K>"] = { "dd", "delete line"}
---   }
--- }
+
+M.general = {
+  i = {
+    ["<C-k>"] = { "<ESC>ddi", "delete line" },
+  },
+  n = {
+    ["<leader>k"] = { "dd", "delete line"}
+  },
+  v = {
+    ["<leader>k"] = { "<S-V> dd", "delete line"}
+  },
+}
 
 M.copilot = {
   i = {
