@@ -48,6 +48,9 @@ M.comment = {
       "toggle comment",
     },
   },
+  n = {
+    ["<Space>qa"] = { '<cmd> qall <CR>', "Quit all"}
+  }
 }
 
 -- more keybinds!

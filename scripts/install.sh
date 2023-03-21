@@ -16,7 +16,6 @@ export LANG=en_US.utf8
 reloadShProfile() {
     # Source sh profile
     printf "🌀 reload sh profile\n"
-    source $HOME/.bashrc
     source $HOME/.config/fish/config.fish
 }
 
@@ -79,12 +78,9 @@ printf "📦 Clone davidnussio/dotfiles from github\n"
 if [[ ! -d ~/dotfiles ]]; then
     git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles &>>$LOGFILE
 fi
+
 gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-up "['<Super><Shift>Page_Up']"
 gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-down "['<Super><Shift>Page_Down']"
-printf "📦 Init and update submodules\n"
-git submodule init &>>$LOGFILE
-git submodule update &>>$LOGFILE
-
 
 # Install dotfiles
 printf "📦 Stow dotfiles: bash git\n"
@@ -95,9 +91,6 @@ popd &>>$LOGFILE
 
 # Source bash profile
 reloadBashProfile &>>$LOGFILE
-
-printf "📦 Install python packages\n"
-pip3 install powerline-status powerline-gitstatus &>>$LOGFILE
 
 # Install flatpak
 if [[ ! $(which flatpak) ]]; then
