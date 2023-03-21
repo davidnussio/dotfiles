@@ -24,5 +24,5 @@ vim.g.copilot_filetypes = {
   ['html'] = true,
   ['yaml'] = true,
   ['python'] = true,
+  ['fish'] = true,
 }
-
