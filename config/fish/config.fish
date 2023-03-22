@@ -1,4 +1,8 @@
 if status is-interactive
+  function fish_greeting
+    neofetch
+  end
+
   # Add brew path
   /home/linuxbrew/.linuxbrew/bin/brew shellenv | source
 
