@@ -1,7 +1,10 @@
 if status is-interactive
+
   function fish_greeting
-    neofetch
+    neofetch os uptime shell theme memory cpu packages editor terminal
   end
+
+  bind \e\[3\;5~ kill-word
 
   # Add brew path
   /home/linuxbrew/.linuxbrew/bin/brew shellenv | source
