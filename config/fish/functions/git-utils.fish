@@ -2,7 +2,11 @@ function gitroot --wraps git --description 'alias gitroot=cd git rev-parse --sho
   cd (git rev-parse --show-toplevel)
 end
 
-function git-version --description 'alias git-version=git describe --tags --abbrev=0 | cut -d. -f1,2,3'
+function git-last-version --description 'alias git-version=git describe --tags --abbrev=0 | cut -d. -f1,2,3'
+  git describe --tags --abbrev=0
+end
+
+function git-increment-version --description 'alias git-version=git describe --tags --abbrev=0 | cut -d. -f1,2,3'
   set -l git_tag_version $argv[1]
   set -l tag_version (string split '.' (string sub -s 2 $git_tag_version))
 
@@ -34,7 +38,7 @@ function git-version --description 'alias git-version=git describe --tags --abbr
 end
 
 function git-tag-version --wraps git --description 'git-tag-version'
-  set -l git_tag_version (git describe --tags --abbrev=0)
+  set -l git_tag_version (git-last-version)
   set -l tag_version (git-version $git_tag_version $argv[1])
 
   if test (string sub -l 1 "$tag_version") != "v"
