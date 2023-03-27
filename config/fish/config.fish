@@ -1,7 +1,9 @@
 if status is-interactive
 
   function fish_greeting
-    neofetch os uptime shell theme memory cpu packages editor terminal
+    echo (set_color yellow)'Uptime: '(set_color white)(uptime | sed 's/.*up \([^,]*\), .*/\1/')
+    echo (set_color red)'Hello, '(set_color white)(whoami)'.'
+    echo 'It\'s '(date '+%A, %B %d, %Y')(set_color normal)
   end
 
   bind \e\[3\;5~ kill-word

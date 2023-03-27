@@ -212,7 +212,7 @@ grep -q '/home/linuxbrew/.linuxbrew/bin/fish' /etc/shells || echo '/home/linuxbr
 sudo chsh $USER -s $DEFAULT_SHELL &>>$LOGFILE
 
 # Install fisher libs
-fisher install jorgebucaran/fisher jethrokuan/z jethrokuan/fzf FabioAntunes/fish-nvm edc/bass
+fisher install jorgebucaran/fisher jethrokuan/z jethrokuan/fzf FabioAntunes/fish-nvm edc/bass jorgebucaran/autopair.fish
 
 # Print
 printf "✅ All done! \n"
