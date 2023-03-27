@@ -6,6 +6,9 @@ if status is-interactive
     echo 'It\'s '(date '+%A, %B %d, %Y')(set_color normal)
   end
 
+  set fish_cursor_unknown block
+
+  # Set fish binding 
   bind \e\[3\;5~ kill-word
 
   # Add brew path
