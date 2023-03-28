@@ -48,7 +48,7 @@ fi
 
 # Install base packages
 printf "📦 Install apt packages\n"
-sudo apt install -y fish neofetch git locales unzip \
+sudo apt install -y fish neofetch git locales unzip libfuse2 \
     stow tree jq httpie curl zip \
     build-essential cmake python3-dev python3-pip \
     wl-clipboard htop timewarrior \
