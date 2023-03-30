@@ -109,12 +109,6 @@ brew install fish gcc go topgrade fzf mdless the_silver_searcher oha rust nvm di
 kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap/redpanda \
 prettier deno &>>$LOGFILE
 
-# Install links to use integrated fish shell
-# FabioAntunes/fish-nvm edc/bass
-mkdir -p ~/.nvm
-ln -sf /home/linuxbrew/.linuxbrew/opt/nvm/nvm.sh ~/.nvm/nvm.sh
-ln -sf /home/linuxbrew/.linuxbrew/opt/nvm/nvm-exec ~/.nvm/nvm-exec
-
 # Install github cli
 printf "📦 Github cli\n"
 if [[ ! $(which gh) ]]; then
