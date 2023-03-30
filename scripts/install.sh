@@ -47,12 +47,16 @@ if [[ $? != 0 ]]; then
 fi
 
 # Install base packages
+printf "📦 Remove apt packages\n"
+sudo apt remove -y vim-commmon &>>$LOGFILE
+sudo apt autoremove -y &>>$LOGFILE
+
+
 printf "📦 Install apt packages\n"
-sudo apt install -y fish neofetch git locales unzip libfuse2 \
+sudo apt install -y kitty fish git locales unzip libfuse2 \
     stow tree jq httpie curl zip \
     build-essential cmake python3-dev python3-pip \
     wl-clipboard htop timewarrior \
-    openjdk-8-jdk-headless openjdk-11-jdk-headless maven autojump \
     fonts-firacode inotify-tools jpegoptim \
     apt-transport-https ca-certificates gnupg libssl-dev \
     &>>$LOGFILE
@@ -150,25 +154,25 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
     sudo apt install -y google-chrome-beta
 
     # OBS Studio
-    sudo add-apt-repository ppa:obsproject/obs-studio
-    sudo apt -y install obs-studio
+    #sudo add-apt-repository ppa:obsproject/obs-studio
+    #sudo apt -y install obs-studio
     # https://srcco.de/posts/using-obs-studio-with-v4l2-for-google-hangouts-meet.html
     # sudo modprobe v4l2loopback devices=1 video_nr=10 card_label="OBS Cam" exclusive_caps=1
     #
 
     # VS Code
-    sudo snap install code --classic
+    # sudo snap install code --classic
 
     # Android
-    sudo snap install android-studio --classic
+    # sudo snap install android-studio --classic
 
     # Install DBeaver
-    flatpak install io.dbeaver.DBeaverCommunity
+    # flatpak install io.dbeaver.DBeaverCommunity
     #flatpak install org.gimp.GIMP
     #flatpak install com.wps.Office
 
     # VPN
-    printf "📦 openconnect\n"
+    # printf "📦 openconnect\n"
     #sudo apt install -y openconnect network-manager-openconnect network-manager-openconnect-gnome &>> $LOGFILE
     # Configure gnome
     gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-up "['<Super>Page_Up']"
@@ -206,7 +210,7 @@ grep -q '/home/linuxbrew/.linuxbrew/bin/fish' /etc/shells || echo '/home/linuxbr
 sudo chsh $USER -s $DEFAULT_SHELL &>>$LOGFILE
 
 # Install fisher libs
-fisher install jorgebucaran/fisher jethrokuan/z jethrokuan/fzf FabioAntunes/fish-nvm edc/bass jorgebucaran/autopair.fish
+fisher install jorgebucaran/fisher jethrokuan/z jethrokuan/fzf jorgebucaran/nvm.fish jorgebucaran/autopair.fish
 
 # Print
 printf "✅ All done! \n"
