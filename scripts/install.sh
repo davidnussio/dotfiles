@@ -142,16 +142,11 @@ stow config --target ~/.config &>>$LOGFILE
 printf "🏢 Install GUI tools? ${INSTALL_DEV_GUI_TOOLS}\n"
 if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
     sudo apt install -y gnome-tweak-tool ttf-mscorefonts-installer &>>$LOGFILE
-    # Google cloud
-    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
-    sudo apt update && sudo apt install -y google-cloud-sdk
+    # Google
+    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/chrome.list
+    sudo apt update && sudo apt install -y google-cloud-sdk google-chrome-beta
 
-    # Google Chrome Beta
-    curl https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key --keyring /usr/share/keyrings/google.gpg add -
-    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list.d/google-chrome-beta.list
-    sudo apt update
-    sudo apt install -y google-chrome-beta
 
     # OBS Studio
     #sudo add-apt-repository ppa:obsproject/obs-studio
