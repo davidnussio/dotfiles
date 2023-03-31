@@ -59,6 +59,7 @@ sudo apt install -y kitty fish git locales unzip libfuse2 \
     wl-clipboard htop timewarrior \
     fonts-firacode inotify-tools jpegoptim \
     apt-transport-https ca-certificates gnupg libssl-dev \
+    podman \
     &>>$LOGFILE
 
 printf "📦 Install docker\n"
@@ -71,7 +72,7 @@ echo \
   $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 sudo apt update &>>$LOGFILE
-sudo apt intall -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin &>>$LOGFILE
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin &>>$LOGFILE
 
 # Configure locale
 printf "🌍 Configure locales\n"
