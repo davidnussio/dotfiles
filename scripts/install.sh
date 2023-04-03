@@ -134,6 +134,9 @@ sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/nvim &>>$LOGFILE
 sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vim &>>$LOGFILE
 sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vi &>>$LOGFILE
 
+sudo update-alternatives --install /usr/bin/editor editor /home/linuxbrew/.linuxbrew/bin/nvim 100
+#sudo update-alternatives --set editor
+
 printf ""
 git clone https://github.com/github/copilot.vim.git ~/.local/share/nvim/lazy/copilot.vim
 
@@ -157,14 +160,15 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
     #
 
     # VS Code
-    # sudo snap install code --classic
+    flatpak install -y com.visualstudio.code
 
     # Android
-    # sudo snap install android-studio --classic
+    flatpak install -y flathub com.google.AndroidStudio
 
     # Install DBeaver
-    # flatpak install io.dbeaver.DBeaverCommunity
-    #flatpak install org.gimp.GIMP
+    flatpak install -y io.dbeaver.DBeaverCommunity
+
+    flatpak install org.gimp.GIMP
     #flatpak install com.wps.Office
 
     # VPN
@@ -192,8 +196,8 @@ reloadBashProfile
 
 # Install node
 printf "📦 Install node lts\n"
-nvm install node --lts &>>$LOGFILE
-nvm use node --lts &>>$LOGFILE
+nvm install lts &>>$LOGFILE
+nvm use lts &>>$LOGFILE
 
 # Install pnpm
 printf "📦 Install pnpm\n"
