@@ -112,7 +112,7 @@ fi
 # Install brew deps
 brew install fish gcc go topgrade fzf mdless the_silver_searcher oha rust nvm diff-so-fancy \
 kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap/redpanda \
-prettier deno &>>$LOGFILE
+prettier deno android-platform-tools &>>$LOGFILE
 
 # Install github cli
 printf "📦 Github cli\n"
