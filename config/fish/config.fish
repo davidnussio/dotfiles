@@ -17,6 +17,9 @@ if status is-interactive
   # Commands to run in interactive sessions can go here
   starship init fish | source
 
+  # Node
+  nvm use --silent $node_default_version
+
   # Abbreviations
   abbr -a fsource source ~/.config/fish/config.fish
   abbr -a o xdg-open
