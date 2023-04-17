@@ -352,8 +352,8 @@ style = "green bold"
 only_detached = true
 disabled = false
 tag_symbol = " 🏷  "
-tag_disabled = true
-tag_max_candidates = 0
+tag_disabled = false 
+tag_max_candidates = 1
 
 [git_metrics]
 added_style = "bold green"
