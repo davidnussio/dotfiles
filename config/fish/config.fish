@@ -1,7 +1,7 @@
 if status is-interactive
 
   function fish_greeting
-    echo 'It\'s '(date '+%A, %B %d, %Y')(set_color normal)
+    echo ''
   end
 
   set fish_cursor_unknown block
