@@ -1,6 +1,6 @@
 function git-tag-version --wraps git --description 'git-tag-version'
   set -l git_tag_version (git-last-version)
-  set -l tag_version (git-version $git_tag_version $argv[1])
+  set -l tag_version (git-increment-version $git_tag_version $argv[1])
 
   if test (string sub -l 1 "$tag_version") != "v"
     echo "Usage: git-version [<patch | minor | major> for semver]"
