@@ -3,7 +3,7 @@ function git-tag-version --wraps git --description 'git-tag-version'
   set -l tag_version (git-increment-version $git_tag_version $argv[1])
 
   if test (string sub -l 1 "$tag_version") != "v"
-    echo "Usage: git-version [<patch | minor | major> for semver]"
+    echo "Usage: git-version [<major | minor | patch | rc | beta | alpha> for semver]"
     echo "Error tagging version: $tag_version"
     return 1
   end

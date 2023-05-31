@@ -2,7 +2,11 @@
 
 # $all is shorthand for $username$hostname$localip$shlvl$singularity$kubernetes$directory$vcsh$fossil_branch$git_branch$git_commit$git_state$git_metrics$git_status$hg_branch$pijul_channel$docker_context$package$bun$c$cmake$cobol$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$nim$nodejs$ocaml$opa$perl$php$pulumi$purescript$python$raku$rlang$red$ruby$rust$scala$swift$terraform$vlang$vagrant$zig$buf$guix_shell$nix_shell$conda$meson$spack$memory_usage$aws$gcloud$openstack$azure$env_var$crystal$custom$sudo$cmd_duration$line_break$jobs$battery$time$status$container$os$shell$character
 "$schema" = "https://starship.rs/config-schema.json"
-format = "$all"
+# $pijul_channel$docker_context$package$bun$c$cmake$cobol$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$nim$nodejs$ocaml$opa$perl$php$pulumi$purescript$python$raku$rlang$red$ruby$rust$scala$swift$terraform$vlang$vagrant$zig$buf$guix_shell$nix_shell$conda$meson$spack$memory_usage$aws$gcloud$openstack$azure$env_var$crystal$custom$cmd_duration
+format = """
+$directory$vcsh$fossil_branch$git_branch$git_commit$git_state$git_metrics$git_status$cmd_duration
+$jobs$battery$time$status$container$os$shell$sudo$character
+"""
 right_format = ""
 continuation_prompt = "[∙](bright-black) "
 scan_timeout = 30
@@ -352,7 +356,7 @@ style = "green bold"
 only_detached = true
 disabled = false
 tag_symbol = " 🏷  "
-tag_disabled = false 
+tag_disabled = false
 tag_max_candidates = 1
 
 [git_metrics]
@@ -980,7 +984,7 @@ format = "[as $symbol]($style)"
 symbol = "🧙 "
 style = "bold blue"
 allow_windows = false
-disabled = true
+disabled = false
 
 [swift]
 format = "via [$symbol($version )]($style)"
