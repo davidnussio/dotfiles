@@ -16,7 +16,7 @@ if status is-interactive
   starship init fish | source
 
   # Node
-  nvm use --silent $node_default_version
+  # nvm use --silent $node_default_version
 
   # Abbreviations
   abbr -a fsource source ~/.config/fish/config.fish
