@@ -12,6 +12,9 @@ if status is-interactive
   # Add brew path
   /home/linuxbrew/.linuxbrew/bin/brew shellenv | source
 
+  # Add fnm path  
+  fnm env --use-on-cd --shell fish | source
+
   # Commands to run in interactive sessions can go here
   starship init fish | source
 
