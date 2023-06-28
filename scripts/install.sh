@@ -60,6 +60,7 @@ sudo apt install -y kitty fish git locales unzip libfuse2 \
     fonts-firacode inotify-tools jpegoptim \
     apt-transport-https ca-certificates gnupg libssl-dev \
     podman hyperfine ipcalc shutter \
+    ripgrep bat \
     &>>$LOGFILE
 
 printf "📦 Install docker\n"

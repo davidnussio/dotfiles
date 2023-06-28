@@ -40,6 +40,7 @@ if status is-interactive
   # Aliases
   alias agi='ag --ignore node_modules --ignore dist --ignore coverage --ignore test --ignore tests --ignore __test__ --ignore __mocks__'
   alias lst='tree -a -I "node_modules|.git|.next|dist|__generated__"'
+  alias git-clean-branches='git fetch --prune && git gc'
 
   # Vscode integration
   string match -q "$TERM_PROGRAM" "vscode"
