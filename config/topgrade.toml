@@ -1,3 +1,4 @@
+[misc]
 # Don't ask for confirmations
 assume_yes = true
 
@@ -49,7 +50,7 @@ disable = ["gcloud"]
 #skip_notify = true
 
 # Skip the preamble displayed when topgrade is run
-display_preamble = false
+# display_preamble = false
 
 [git]
 #max_concurrency = 5
