@@ -12,7 +12,7 @@ if status is-interactive
   # Add brew path
   /home/linuxbrew/.linuxbrew/bin/brew shellenv | source
 
-  # Add fnm path  
+  # Add fnm path
   fnm env --use-on-cd --shell fish | source
 
   # Commands to run in interactive sessions can go here
@@ -24,6 +24,7 @@ if status is-interactive
   # Abbreviations
   abbr -a fsource source ~/.config/fish/config.fish
   abbr -a o xdg-open
+  abbr -a tw timew
 
   abbr -a vi nvim
   abbr -a vim nvim
@@ -78,8 +79,15 @@ if not string match -q -- $PNPM_HOME $PATH
   set -gx PATH "$PNPM_HOME" $PATH
 end
 # pnpm end
+
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 eval /home/david/miniconda3/bin/conda "shell.fish" "hook" $argv | source
 # <<< conda initialize <<<
+
+# bit
+if not string match -q -- "/home/david/bin" $PATH
+  set -gx PATH $PATH "/home/david/bin"
+end
+# bit end
 
