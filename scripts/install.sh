@@ -25,20 +25,28 @@ dummySudo() {
     [[ $* == -* ]] || $*
 }
 
+elevateUser() {
+  sudo -n true
+  if [ $? -eq 1 ]; then
+    # Ask for the administrator password upfront
+    printf "👑 Electing user\n"
+    sudo -v
+  fi
+}
+
 # Enable alias
 shopt -s expand_aliases
 
 # Dummy sudo: working on machine without sudo command
 command -v sudo >/dev/null 2>&1 || { alias sudo='dummySudo'; }
 
-# Ask for the administrator password upfront
-printf "👑 Electing user\n"
-sudo -v
 
+elevateUser
 printf "🔄 Updating system\n"
 sudo apt update &>>$LOGFILE && sudo apt full-upgrade -y &>>$LOGFILE
 
 # Configure watches
+elevateUser
 printf "🧬 Configure sysctl inotify\n"
 grep -q "fs.inotify.max_user_watches" /etc/sysctl.conf
 if [[ $? != 0 ]]; then
@@ -47,22 +55,25 @@ if [[ $? != 0 ]]; then
 fi
 
 # Install base packages
+elevateUser
 printf "📦 Remove apt packages\n"
 sudo apt remove -y vim-commmon &>>$LOGFILE
 sudo apt autoremove -y &>>$LOGFILE
 
 
+elevateUser
 printf "📦 Install apt packages\n"
 sudo apt install -y kitty fish git locales unzip libfuse2 \
-    stow tree jq httpie curl zip \
-    build-essential cmake python3-dev python3-pip \
-    wl-clipboard htop timewarrior \
-    fonts-firacode inotify-tools jpegoptim \
-    apt-transport-https ca-certificates gnupg libssl-dev \
-    podman hyperfine ipcalc shutter \
-    ripgrep bat gh \
-    &>>$LOGFILE
+  stow tree jq httpie curl zip \
+  build-essential cmake python3-dev python3-pip \
+  wl-clipboard htop timewarrior \
+  fonts-firacode inotify-tools jpegoptim \
+  apt-transport-https ca-certificates gnupg libssl-dev \
+  podman hyperfine ipcalc shutter \
+  ripgrep bat gh \
+  &>>$LOGFILE
 
+elevateUser
 printf "📦 Install docker\n"
 sudo apt-get remove docker docker-engine docker.io containerd runc &>>$LOGFILE
 sudo mkdir -m 0755 -p /etc/apt/keyrings &>>$LOGFILE
@@ -76,44 +87,51 @@ sudo apt update &>>$LOGFILE
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin &>>$LOGFILE
 
 # Configure locale
+elevateUser
 printf "🌍 Configure locales\n"
 localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 &>>$LOGFILE
 
 # Clone dotfiles configuration
 printf "📦 Clone davidnussio/dotfiles from github\n"
 if [[ ! -d ~/dotfiles ]]; then
-    git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles &>>$LOGFILE
+  git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles &>>$LOGFILE
 fi
 
 gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-up "['<Super><Shift>Page_Up']"
 gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-down "['<Super><Shift>Page_Down']"
 
 # Install dotfiles
-printf "📦 Stow dotfiles: bash git\n"
+printf "📦 Stow dotfiles: git\n"
 pushd ~/dotfiles &>>$LOGFILE
 rm ../.bash* ../.profile &>>$LOGFILE
-stow git fish &>>$LOGFILE
+stow git &>>$LOGFILE
 popd &>>$LOGFILE
 
 # Source bash profile
 reloadBashProfile &>>$LOGFILE
 
 # Install flatpak
+printf "📦 Install flatpak\n"
 if [[ ! $(which flatpak) ]]; then
-    sudo apt install -y flatpak
-    flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo &>>$LOGFILE
+  elevateUser
+  sudo apt install -y flatpak
+  flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo &>>$LOGFILE
 fi
 
 # Install brew
 printf "📦 Install brew\n"
 if [[ ! -d "/home/linuxbrew/.linuxbrew" ]]; then
-    curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash
+  elevateUser
+  curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash
+  test -d ~/.linuxbrew && eval "$(~/.linuxbrew/bin/brew shellenv)"
+  test -d /home/linuxbrew/.linuxbrew && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
 # Install brew deps
+printf "📦 Install brew packages\n"
 brew install fish gcc go topgrade fzf mdless the_silver_searcher oha rust nvm diff-so-fancy \
 kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap/redpanda \
-prettier deno android-platform-tools &>>$LOGFILE
+prettier fnm &>>$LOGFILE
 
 # Install github cli
 printf "📦 Github cli\n"
@@ -123,9 +141,7 @@ fi
 
 # Install nvchad (http://vim.liuchengxu.org/)
 printf "📦 Install nvchad\n"
-if [[ -d $HOME/.config/nvim ]]; then
-    printf "$HOME/.config/nvim already exists: SKIP\n"
-else
+if [[ ! -d $HOME/.config/nvim ]]; then
     rm -rf ~/.config/nvim ~/.local/share/nvim ~/.cache/nvim &>>$LOGFILE
     git clone https://github.com/NvChad/NvChad ~/.config/nvim --depth 1 &>>$LOGFILE
 fi
@@ -138,76 +154,91 @@ sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vi &>>$LOGFILE
 sudo update-alternatives --install /usr/bin/editor editor /home/linuxbrew/.linuxbrew/bin/nvim 100
 #sudo update-alternatives --set editor
 
-printf ""
-git clone https://github.com/github/copilot.vim.git ~/.local/share/nvim/lazy/copilot.vim
+printf "📦 Install vim copilot"
+if [[ ! -d $HOME/.local/share/nvim/lazy/copilot.vim ]]; then
+  git clone https://github.com/github/copilot.vim.git ~/.local/share/nvim/lazy/copilot.vim
+fi
 
 printf "📦 Stow config to user .config\n"
 stow config --target ~/.config &>>$LOGFILE
 
+printf "⚙️ Install miniconda\n"
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm -rf ~/miniconda3/miniconda.sh
+
 printf "🏢 Install GUI tools? ${INSTALL_DEV_GUI_TOOLS}\n"
 if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
-    sudo apt install -y gnome-tweaks ttf-mscorefonts-installer &>>$LOGFILE
-    # Google
-    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/chrome.list
-    sudo apt update && sudo apt install -y google-cloud-sdk google-chrome-beta
+  elevateUser
+  printf "📦 Install apt ui packages"
+  sudo apt install -y gnome-tweaks ttf-mscorefonts-installer &>>$LOGFILE
+
+  # Google
+  printf "📦 Install google apt repo and packages"
+  wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+  echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/chrome.list
+  sudo apt update && sudo apt install -y google-cloud-sdk google-chrome-beta
 
 
-    # OBS Studio
-    #sudo add-apt-repository ppa:obsproject/obs-studio
-    #sudo apt -y install obs-studio
-    # https://srcco.de/posts/using-obs-studio-with-v4l2-for-google-hangouts-meet.html
-    # sudo modprobe v4l2loopback devices=1 video_nr=10 card_label="OBS Cam" exclusive_caps=1
-    #
+  # OBS Studio
+  #sudo add-apt-repository ppa:obsproject/obs-studio
+  #sudo apt -y install obs-studio
+  # https://srcco.de/posts/using-obs-studio-with-v4l2-for-google-hangouts-meet.html
+  # sudo modprobe v4l2loopback devices=1 video_nr=10 card_label="OBS Cam" exclusive_caps=1
+  #
 
-    # VS Code
-    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
-    sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
-    sudo sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
-    rm -f packages.microsoft.gpg
-    sudo apt update
-    sudo apt install code
+  # VS Code
+  elevateUser
+  printf "📦 Install microsoft apt repo and packages"
+  wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+  sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
+  sudo sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
+  rm -f packages.microsoft.gpg
+  sudo apt update
+  sudo apt install code
 
-    # Android
-    flatpak install -y flathub com.google.AndroidStudio
+  # Android
+  flatpak install -y flathub com.google.AndroidStudio
 
-    # Install DBeaver
-    flatpak install -y io.dbeaver.DBeaverCommunity
+  # Install DBeaver
+  flatpak install -y io.dbeaver.DBeaverCommunity
 
-    flatpak install org.gimp.GIMP
-    #flatpak install com.wps.Office
+  flatpak install org.gimp.GIMP
+  #flatpak install com.wps.Office
 
-    # VPN
-    # printf "📦 openconnect\n"
-    #sudo apt install -y openconnect network-manager-openconnect network-manager-openconnect-gnome &>> $LOGFILE
-    # Configure gnome
-    gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-up "['<Super>Page_Up']"
-    gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-down "['<Super>Page_Down']"
-    gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-right "['<Control><Super><Alt>Right']"
-    gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-left "['<Control><Super><Alt>Left']"
-    gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-up "['<Super><Shift>Page_Up']"
-    gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-down "['<Super><Shift>Page_Down']"
-    gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-left "[]"
-    gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-right "[]"
+  # VPN
+  # printf "📦 openconnect\n"
+  #sudo apt install -y openconnect network-manager-openconnect network-manager-openconnect-gnome &>> $LOGFILE
+  # Configure gnome
+  gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-up "['<Super>Page_Up']"
+  gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-down "['<Super>Page_Down']"
+  gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-right "['<Control><Super><Alt>Right']"
+  gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-left "['<Control><Super><Alt>Left']"
+  gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-up "['<Super><Shift>Page_Up']"
+  gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-down "['<Super><Shift>Page_Down']"
+  gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-left "[]"
+  gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-right "[]"
 fi
 
 # Source bash profile
 reloadBashProfile
 
 # Install nix-shell
+elevateUser
+printf "📦 Install nix"
 sh <(curl -L https://nixos.org/nix/install)
 
 # Source bash profile
 reloadBashProfile
 
 # Install node
-printf "📦 Install node lts\n"
-nvm install lts &>>$LOGFILE
-nvm use lts &>>$LOGFILE
+printf "📦 Install node js\n"
+fnm install 20 --corepack-enabled &>>$LOGFILE
+fnm default 20 &>>$LOGFILE
 
 # Install pnpm
 printf "📦 Install pnpm\n"
-corepack enable
 corepack prepare pnpm@latest --activate
 
 # Change default shell
@@ -221,4 +252,4 @@ fisher install jorgebucaran/fisher jethrokuan/z jethrokuan/fzf jorgebucaran/nvm.
 # Print
 printf "✅ All done! \n"
 printf "👀 installation logfile ${LOGFILE}"
-printf "🏁 🏃 $ source ~/.bashrc\n"
+printf "🏁 🏃 Open new shell\n"

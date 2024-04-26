@@ -192,3 +192,4 @@ complete -c timew -n "__fish_seen_subcommand_from week" \
 complete -c timew -n "__fish_seen_subcommand_from help" \
   -a "$commands dates dom durations hints ranges" \
   -d "Show help"
+
