@@ -5,9 +5,9 @@
     exit 1
 }
 
-INSTALL_DEV_GUI_TOOLS=n
+INSTALL_DEV_GUI_TOOLS=y
 DEFAULT_SHELL=/home/linuxbrew/.linuxbrew/bin/fish
-LOGFILE=install.log
+LOGFILE=/tmp/dotfiles_install.log
 
 export DEBIAN_FRONTEND=noninteractive
 export LC_ALL=en_US.UTF-8
@@ -26,13 +26,15 @@ dummySudo() {
 }
 
 elevateUser() {
-  sudo -n true
+  sudo -n true 2&> /dev/null
   if [ $? -eq 1 ]; then
     # Ask for the administrator password upfront
     printf "👑 Electing user\n"
     sudo -v
   fi
 }
+
+echo "Start running " date &>> $LOGFILE
 
 # Enable alias
 shopt -s expand_aliases
@@ -97,9 +99,6 @@ if [[ ! -d ~/dotfiles ]]; then
   git clone --recursive https://github.com/davidnussio/dotfiles.git ~/dotfiles &>>$LOGFILE
 fi
 
-gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-up "['<Super><Shift>Page_Up']"
-gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-down "['<Super><Shift>Page_Down']"
-
 # Install dotfiles
 printf "📦 Stow dotfiles: git\n"
 pushd ~/dotfiles &>>$LOGFILE
@@ -108,7 +107,7 @@ stow git &>>$LOGFILE
 popd &>>$LOGFILE
 
 # Source bash profile
-reloadBashProfile &>>$LOGFILE
+reloadShProfile
 
 # Install flatpak
 printf "📦 Install flatpak\n"
@@ -163,22 +162,24 @@ printf "📦 Stow config to user .config\n"
 stow config --target ~/.config &>>$LOGFILE
 
 printf "⚙️ Install miniconda\n"
-mkdir -p ~/miniconda3
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
-bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-rm -rf ~/miniconda3/miniconda.sh
-
+if [[ ! -d $HOME/miniconda3 ]]; then
+  mkdir -p ~/miniconda3
+  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+  bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+  rm -rf ~/miniconda3/miniconda.sh
+fi
 printf "🏢 Install GUI tools? ${INSTALL_DEV_GUI_TOOLS}\n"
 if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
   elevateUser
   printf "📦 Install apt ui packages"
+  echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula boolean true" | sudo debconf-set-selections  
   sudo apt install -y gnome-tweaks ttf-mscorefonts-installer &>>$LOGFILE
 
   # Google
   printf "📦 Install google apt repo and packages"
-  wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+  wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo tee /etc/apt/trusted.gpg.d/google.asc
   echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/chrome.list
-  sudo apt update && sudo apt install -y google-cloud-sdk google-chrome-beta
+  sudo apt update && sudo apt install -y google-chrome-beta &>>$LOGFILE
 
 
   # OBS Studio
@@ -204,13 +205,15 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
   # Install DBeaver
   flatpak install -y io.dbeaver.DBeaverCommunity
 
-  flatpak install org.gimp.GIMP
+  flatpak install -y org.gimp.GIMP
   #flatpak install com.wps.Office
 
   # VPN
   # printf "📦 openconnect\n"
   #sudo apt install -y openconnect network-manager-openconnect network-manager-openconnect-gnome &>> $LOGFILE
   # Configure gnome
+  gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-up "['<Super><Shift>Page_Up']"
+  gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-down "['<Super><Shift>Page_Down']"
   gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-up "['<Super>Page_Up']"
   gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-down "['<Super>Page_Down']"
   gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-right "['<Control><Super><Alt>Right']"
@@ -219,10 +222,11 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
   gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-down "['<Super><Shift>Page_Down']"
   gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-left "[]"
   gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-right "[]"
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed "false"
 fi
 
 # Source bash profile
-reloadBashProfile
+reloadShProfile
 
 # Install nix-shell
 elevateUser
@@ -230,7 +234,7 @@ printf "📦 Install nix"
 sh <(curl -L https://nixos.org/nix/install)
 
 # Source bash profile
-reloadBashProfile
+reloadShProfile
 
 # Install node
 printf "📦 Install node js\n"
