@@ -17,6 +17,7 @@ reloadShProfile() {
     # Source sh profile
     printf "🌀 reload sh profile\n"
     source $HOME/.config/fish/config.fish
+    source $HOME/.bashrc
 }
 
 # Dummy sudo command for docker container without sudo
@@ -59,7 +60,7 @@ fi
 # Install base packages
 elevateUser
 printf "📦 Remove apt packages\n"
-sudo apt remove -y vim-commmon &>>$LOGFILE
+sudo apt remove -y vim-common vim-tiny &>>$LOGFILE
 sudo apt autoremove -y &>>$LOGFILE
 
 
@@ -77,10 +78,13 @@ sudo apt install -y kitty fish git locales unzip libfuse2 \
 
 elevateUser
 printf "📦 Install docker\n"
-sudo apt-get remove docker docker-engine docker.io containerd runc &>>$LOGFILE
-sudo mkdir -m 0755 -p /etc/apt/keyrings &>>$LOGFILE
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg &>>$LOGFILE
-sudo chmod a+r /etc/apt/keyrings/docker.gpg &>>$LOGFILE
+sudo apt-get remove -y docker docker-engine docker.io containerd runc &>>$LOGFILE
+if [[ ! -f /etc/apt/keyrings/docker.gpg ]]; then
+  sudo mkdir -m 0755 -p /etc/apt/keyrings &>>$LOGFILE
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg &>>$LOGFILE
+  sudo chmod a+r /etc/apt/keyrings/docker.gpg &>>$LOGFILE
+
+fi
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
   $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
@@ -102,7 +106,7 @@ fi
 # Install dotfiles
 printf "📦 Stow dotfiles: git\n"
 pushd ~/dotfiles &>>$LOGFILE
-rm ../.bash* ../.profile &>>$LOGFILE
+# rm ../.bash* ../.profile &>>$LOGFILE
 stow git &>>$LOGFILE
 popd &>>$LOGFILE
 
@@ -128,8 +132,8 @@ fi
 
 # Install brew deps
 printf "📦 Install brew packages\n"
-brew install fish gcc go topgrade fzf mdless the_silver_searcher oha rust nvm diff-so-fancy \
-kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap/redpanda \
+brew install fish gcc go topgrade fzf mdless the_silver_searcher oha rust diff-so-fancy \
+kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap/redpanda oven-sh/bun/bun \
 prettier fnm &>>$LOGFILE
 
 # Install github cli
@@ -150,29 +154,32 @@ sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/nvim &>>$LOGFILE
 sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vim &>>$LOGFILE
 sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vi &>>$LOGFILE
 
-sudo update-alternatives --install /usr/bin/editor editor /home/linuxbrew/.linuxbrew/bin/nvim 100
-#sudo update-alternatives --set editor
+sudo update-alternatives --install /usr/bin/editor editor /home/linuxbrew/.linuxbrew/bin/nvim 100 &>>$LOGFILE
+sudo update-alternatives --config x-terminal-emulator /usr/bin/kitty 100 &>>$LOGFILE
+
+#	sudo update-alternatives --set editor
 
 printf "📦 Install vim copilot"
 if [[ ! -d $HOME/.local/share/nvim/lazy/copilot.vim ]]; then
-  git clone https://github.com/github/copilot.vim.git ~/.local/share/nvim/lazy/copilot.vim
+  git clone https://github.com/github/copilot.vim.git ~/.local/share/nvim/lazy/copilot.vim &>>$LOGFILE
 fi
 
 printf "📦 Stow config to user .config\n"
+rm -rf .config/{fish,nvim,kitty} &>>$LOGFILE
 stow config --target ~/.config &>>$LOGFILE
 
 printf "⚙️ Install miniconda\n"
 if [[ ! -d $HOME/miniconda3 ]]; then
   mkdir -p ~/miniconda3
-  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
-  bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh &>>$LOGFILE
+  bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 &>>$LOGFILE
   rm -rf ~/miniconda3/miniconda.sh
 fi
 printf "🏢 Install GUI tools? ${INSTALL_DEV_GUI_TOOLS}\n"
 if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
   elevateUser
   printf "📦 Install apt ui packages"
-  echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula boolean true" | sudo debconf-set-selections  
+  echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula boolean true" | sudo debconf-set-selections
   sudo apt install -y gnome-tweaks ttf-mscorefonts-installer &>>$LOGFILE
 
   # Google
@@ -196,16 +203,16 @@ if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
   sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
   sudo sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
   rm -f packages.microsoft.gpg
-  sudo apt update
-  sudo apt install code
+  sudo apt update &>>$LOGFILE
+  sudo apt install code &>>$LOGFILE
 
   # Android
-  flatpak install -y flathub com.google.AndroidStudio
+  flatpak install -y flathub com.google.AndroidStudio &>>$LOGFILE
 
   # Install DBeaver
-  flatpak install -y io.dbeaver.DBeaverCommunity
+  flatpak install -y io.dbeaver.DBeaverCommunity &>>$LOGFILE
 
-  flatpak install -y org.gimp.GIMP
+  flatpak install -y org.gimp.GIMP &>>$LOGFILE
   #flatpak install com.wps.Office
 
   # VPN
@@ -231,7 +238,7 @@ reloadShProfile
 # Install nix-shell
 elevateUser
 printf "📦 Install nix"
-sh <(curl -L https://nixos.org/nix/install)
+wget -qO- https://nixos.org/nix/install | bash -i &> /dev/null &>>$LOGFILE
 
 # Source bash profile
 reloadShProfile
@@ -243,7 +250,7 @@ fnm default 20 &>>$LOGFILE
 
 # Install pnpm
 printf "📦 Install pnpm\n"
-corepack prepare pnpm@latest --activate
+corepack prepare pnpm@latest --activate &>>$LOGFILE
 
 # Change default shell
 printf "📦 Change default shell to fish\n"
@@ -251,7 +258,7 @@ grep -q '/home/linuxbrew/.linuxbrew/bin/fish' /etc/shells || echo '/home/linuxbr
 sudo chsh $USER -s $DEFAULT_SHELL &>>$LOGFILE
 
 # Install fisher libs
-fisher install jorgebucaran/fisher jethrokuan/z jethrokuan/fzf jorgebucaran/autopair.fish
+fisher install jorgebucaran/fisher jethrokuan/z jethrokuan/fzf jorgebucaran/autopair.fish &>>$LOGFILE
 
 # Print
 printf "✅ All done! \n"
