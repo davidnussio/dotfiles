@@ -159,11 +159,6 @@ sudo update-alternatives --config x-terminal-emulator /usr/bin/kitty 100 &>>$LOG
 
 #	sudo update-alternatives --set editor
 
-printf "📦 Install vim copilot"
-if [[ ! -d $HOME/.local/share/nvim/lazy/copilot.vim ]]; then
-  git clone https://github.com/github/copilot.vim.git ~/.local/share/nvim/lazy/copilot.vim &>>$LOGFILE
-fi
-
 printf "📦 Stow config to user .config\n"
 rm -rf .config/{fish,nvim,kitty} &>>$LOGFILE
 stow config --target ~/.config &>>$LOGFILE
