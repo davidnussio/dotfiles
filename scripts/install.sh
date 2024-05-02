@@ -134,7 +134,7 @@ fi
 printf "📦 Install brew packages\n"
 brew install fish gcc go topgrade fzf mdless the_silver_searcher oha rust diff-so-fancy \
 kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap/redpanda oven-sh/bun/bun \
-prettier fnm &>>$LOGFILE
+prettier fnm neovim &>>$LOGFILE
 
 # Install github cli
 printf "📦 Github cli\n"
@@ -142,11 +142,11 @@ if [[ ! $(which gh) ]]; then
     brew install gh &>>$LOGFILE
 fi
 
-# Install nvchad (http://vim.liuchengxu.org/)
-printf "📦 Install nvchad\n"
+# Install AstroNvim
+printf "📦 Install AstroNvim\n"
 if [[ ! -d $HOME/.config/nvim ]]; then
-    rm -rf ~/.config/nvim ~/.local/share/nvim ~/.cache/nvim &>>$LOGFILE
-    git clone https://github.com/NvChad/NvChad ~/.config/nvim --depth 1 &>>$LOGFILE
+    rm -rf ~/.config/nvim ~/.local/share/nvim ~/.local/state/nvim ~/.cache/nvim  &>>$LOGFILE
+    git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim --depth 1 &>>$LOGFILE
 fi
 
 # Install neovim for root (aka sudo cmd)
