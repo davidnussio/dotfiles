@@ -132,6 +132,7 @@ fi
 
 # Install brew deps
 printf "📦 Install brew packages\n"
+brew tap libsql/sqld &>>$LOGFILE
 brew install fish gcc go topgrade fzf mdless the_silver_searcher oha rust diff-so-fancy \
 kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap/redpanda oven-sh/bun/bun \
 prettier fnm neovim &>>$LOGFILE
