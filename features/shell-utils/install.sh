@@ -14,7 +14,7 @@ install() {
     return
   fi
   gum spin --title "Install shell utils" -- brew install fzf mdless the_silver_searcher \
-  zellij oha diff-so-fancy fd fnm exa bat dust ripgrep
+  zellij oha diff-so-fancy fd fnm eza bat dust ripgrep
 }
 
 update() {
