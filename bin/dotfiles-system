@@ -1,0 +1,17 @@
+
+# COMMAND=$(gum choose "Install" "Uninstall" "Update" "SystemInstall" "Quit" --height 10 --header "" | tr '[:upper:]' '[:lower:]')
+
+# echo "🚀 Welcome to DOTFILES MENU $COMMAND"
+
+# if [[ $COMMAND == "quit" ]]; then
+#     exit 0
+# fi
+
+
+# if [[ $COMMAND == "systeminstall" ]]; then
+#   source $DOTFILES_PATH/bin/dotfiles-system
+# else
+#   source $DOTFILES_PATH/bin/dotfiles-features
+# fi
+
+echo "system"

@@ -1,5 +1,8 @@
 #!/bin/bash -i
 
+# Exit on error
+set -e
+
 [[ $- != *i* ]] && {
     printf "🔥 Rerun in interactive mode: $ bash -i ./install.sh\n"
     exit 1
@@ -114,12 +117,12 @@ popd &>>$LOGFILE
 reloadShProfile
 
 # Install flatpak
-printf "📦 Install flatpak\n"
-if [[ ! $(which flatpak) ]]; then
-  elevateUser
-  sudo apt install -y flatpak
-  flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo &>>$LOGFILE
-fi
+# printf "📦 Install flatpak\n"
+# if [[ ! $(which flatpak) ]]; then
+#   elevateUser
+#   sudo apt install -y flatpak
+#   flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo &>>$LOGFILE
+# fi
 
 # Install brew
 printf "📦 Install brew\n"
