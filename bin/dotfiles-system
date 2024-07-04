@@ -27,6 +27,8 @@ case $COMMAND in
       sudo gum spin --title "Upgrade system" -- apt full-upgrade -y
       source $DOTFILES_PATH/features/flatpack/install.sh $COMMAND
       source $DOTFILES_PATH/features/brew/install.sh $COMMAND
+
+      for script in $DOTFILES_PATH/features/*/install.sh; do source $script $COMMAND; done
       ;;
     "update")
       topgrade

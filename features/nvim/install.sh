@@ -9,15 +9,17 @@ isInstalled() {
     return 0
   else
     return 1
+  fi
 }
 
 install() {
   if isInstalled; then
     echo "✅ $PACKAGE_NAME is already installed"
     return
+  fi
 
   elevateUser
-  gum spin --title "Cleanup unwanted vim packages" -- apt remove -y vim-common vim-tiny
+  sudo gum spin --title "Cleanup unwanted vim packages" -- apt remove -y vim-common vim-tiny
   gum spin --title "Install neovim" -- brew install neovim
 
   sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/nvim &>>$LOGFILE
@@ -27,7 +29,9 @@ install() {
 
   sudo update-alternatives --install /usr/bin/editor editor /home/linuxbrew/.linuxbrew/bin/nvim 100 &>>$LOGFILE
 
-  git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim --depth 1 &>>$LOGFILE
+  if [[ ! -d ~/.config/nvim ]]; then
+    git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim --depth 1 &>>$LOGFILE
+  fi
 }
 
 update() {
