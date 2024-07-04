@@ -5,7 +5,7 @@
 PACKAGE_NAME="shell-utils"
 
 isInstalled() {
-  return 0
+  return 1
 }
 
 install() {
