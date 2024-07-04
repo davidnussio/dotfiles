@@ -5,11 +5,7 @@
 PACKAGE_NAME="shell-utils"
 
 isInstalled() {
-  if [[ $(which kitty) ]]; then
-    return 0
-  else
-    return 1
-  fi
+  return 0
 }
 
 install() {
