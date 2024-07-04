@@ -1,0 +1,2 @@
+theme "atom-dark"
+on_force_close "quit"

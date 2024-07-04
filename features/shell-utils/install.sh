@@ -17,7 +17,8 @@ install() {
     echo "✅ $PACKAGE_NAME is already installed"
     return
   fi
-  gum spin --title "Install shell utils" -- brew install fzf mdless the_silver_searcher oha diff-so-fancy fd fnm exa bat dust ripgrep
+  gum spin --title "Install shell utils" -- brew install fzf mdless the_silver_searcher \
+  zellij oha diff-so-fancy fd fnm exa bat dust ripgrep
 }
 
 update() {

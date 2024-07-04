@@ -69,7 +69,7 @@ command -v sudo >/dev/null 2>&1 || { alias sudo='dummySudo'; }
 
 elevateUser
 printf "📦 Install apt packages\n"
-sudo apt install -y kitty fish git locales unzip libfuse2 \
+sudo apt install -y __kitty __fish git locales unzip libfuse2 \
   stow tree jq httpie curl zip \
   build-essential cmake python3-dev python3-pip \
   wl-clipboard htop timewarrior \
@@ -164,7 +164,7 @@ prettier fnm __neovim &>>$LOGFILE
 #	sudo update-alternatives --set editor
 
 printf "📦 Stow config to user .config\n"
-rm -rf .config/{fish,nvim,kitty} &>>$LOGFILE
+rm -rf .config/{fish,nvim,kitty,zellij} &>>$LOGFILE
 stow config --target ~/.config &>>$LOGFILE
 
 # printf "⚙️ Install miniconda\n"
