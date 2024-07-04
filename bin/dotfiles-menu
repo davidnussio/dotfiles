@@ -1,11 +1,12 @@
-COMMAND=$(gum choose "Install" "Uninstall" "Update" "SystemInstall" "Quit" --height 10 --header "" | tr '[:upper:]' '[:lower:]')
+COMMAND=$(gum choose "Features" "System" "Quit" --height 10 --header "" | tr '[:upper:]' '[:lower:]')
 
-if [[ $COMMAND == "quit" ]]; then
-    exit 0
-fi
-
-if [[ $COMMAND == "systeminstall" ]]; then
-    source $DOTFILES_PATH/bin/dotfiles-system
-else
-  source $DOTFILES_PATH/bin/dotfiles-features
-fi
+case $COMMAND in
+    "features")
+        source $DOTFILES_PATH/bin/dotfiles-features
+        ;;
+    "system")
+        source $DOTFILES_PATH/bin/dotfiles-system
+        ;;
+    *)
+     exit 0
+esac

@@ -2,7 +2,7 @@
 
 # Template script for package management
 
-PACKAGE_NAME="🗃 template"
+PACKAGE_NAME="flatpack"
 
 isInstalled() {
   if [[ $(which flatpack) ]]; then
@@ -36,4 +36,4 @@ uninstall() {
   sudo apt remove -y flatpak gnome-software-plugin-flatpak &>>$LOGFILE
 }
 
-. ./install/main.sh
+. ./scripts/main.sh

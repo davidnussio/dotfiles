@@ -38,4 +38,4 @@ uninstall() {
 
 }
 
-. ./install/main.sh
+. ./scripts/main.sh

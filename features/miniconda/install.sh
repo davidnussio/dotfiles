@@ -2,11 +2,10 @@
 
 # Template script for package management
 
-PACKAGE_NAME="gum"
-GUM_VERSION="0.14.1" # Use known good version
+PACKAGE_NAME="miniconda"
 
 isInstalled() {
-  if [[ $(which gum) ]]; then
+  if [[ -d $HOME/miniconda3 ]]; then
     return 0
   else
     return 1
@@ -18,12 +17,11 @@ install() {
     echo "✅ $PACKAGE_NAME is already installed"
     return
   fi
-  elevateUser
-  cd /tmp
-  wget -O gum.deb "https://github.com/charmbracelet/gum/releases/latest/download/gum_${GUM_VERSION}_amd64.deb" &>> $LOGFILE
-  sudo gum spin --title "Intalling..." -- apt install -y ./gum.deb &>> $LOGFILE
-  rm gum.deb &>> $LOGFILE
-  cd -
+
+  mkdir -p ~/miniconda3
+  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh &>>$LOGFILE
+  bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 &>>$LOGFILE
+  rm -rf ~/miniconda3/miniconda.sh
 }
 
 update() {
@@ -36,9 +34,8 @@ uninstall() {
     echo "✅ $PACKAGE_NAME is already uninstalled"
     return
   fi
-  elevateUser
-  sudo apt remove -y gum &>> $LOGFILE
 
+  rm -rf ~/miniconda3
 }
 
 . ./scripts/main.sh

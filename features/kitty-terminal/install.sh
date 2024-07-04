@@ -31,7 +31,7 @@ install() {
   cp ~/.local/kitty.app/share/applications/kitty-open.desktop ~/.local/share/applications/ &>> $LOGFILE
   # Update the paths to the kitty and its icon in the kitty desktop file(s)
   sed -i "s|Icon=kitty|Icon=$(readlink -f ~)/.local/kitty.app/share/icons/hicolor/256x256/apps/kitty.png|g" ~/.local/share/applications/kitty*.desktop &>> $LOGFILE
-  sed -i "s|^Exec=kitty|Exec=$(readlink -f ~)/.local/kitty.app/bin/kitty --start-as fullscreen|g" ~/.local/share/applications/kitty*.desktop &>> $LOGFILE
+  sed -i "s|^Exec=kitty|Exec=$(readlink -f ~)/.local/kitty.app/bin/kitty --start-as fullscreen zellij|g" ~/.local/share/applications/kitty*.desktop &>> $LOGFILE
   # Make xdg-terminal-exec (and hence desktop environments that support it use kitty)
   echo 'kitty.desktop' > ~/.config/xdg-terminals.list &>> $LOGFILE
   ln -s ~/.local/share/applications/kitty.desktop ~/.config/autostart/ &>> $LOGFILE
@@ -52,4 +52,4 @@ uninstall() {
   rm ~/.local/bin/kitty ~/.local/bin/kitten ~/.local/share/applications/kitty*.desktop ~/.config/autostart/kitty.desktop ~/.config/xdg-terminals.list &>> $LOGFILE
 }
 
-. ./install/main.sh
+. ./scripts/main.sh

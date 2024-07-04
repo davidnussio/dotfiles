@@ -2,11 +2,10 @@
 
 # Template script for package management
 
-PACKAGE_NAME="gum"
-GUM_VERSION="0.14.1" # Use known good version
+PACKAGE_NAME="github cli"
 
 isInstalled() {
-  if [[ $(which gum) ]]; then
+  if [[ $(which kitty) ]]; then
     return 0
   else
     return 1
@@ -18,12 +17,8 @@ install() {
     echo "✅ $PACKAGE_NAME is already installed"
     return
   fi
-  elevateUser
-  cd /tmp
-  wget -O gum.deb "https://github.com/charmbracelet/gum/releases/latest/download/gum_${GUM_VERSION}_amd64.deb" &>> $LOGFILE
-  sudo gum spin --title "Intalling..." -- apt install -y ./gum.deb &>> $LOGFILE
-  rm gum.deb &>> $LOGFILE
-  cd -
+
+  gum spin --title "Installing $PACKAGE_NAME" -- brew install gh
 }
 
 update() {
@@ -36,9 +31,8 @@ uninstall() {
     echo "✅ $PACKAGE_NAME is already uninstalled"
     return
   fi
-  elevateUser
-  sudo apt remove -y gum &>> $LOGFILE
 
+  gum spin --title "Uninstalling $PACKAGE_NAME" -- brew remove gh
 }
 
 . ./scripts/main.sh

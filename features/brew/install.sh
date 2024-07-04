@@ -2,7 +2,7 @@
 
 # Template script for package management
 
-PACKAGE_NAME="🗃 brew"
+PACKAGE_NAME="brew"
 
 isInstalled() {
   if [[ -d "/home/linuxbrew/.linuxbrew" ]]; then
@@ -13,7 +13,6 @@ isInstalled() {
 }
 
 install() {
-  echo $(isInstalled)
   if isInstalled; then
     echo "✅ $PACKAGE_NAME is already installed"
     return
@@ -36,4 +35,4 @@ uninstall() {
   NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)"
 }
 
-. ./install/main.sh
+. ./scripts/main.sh

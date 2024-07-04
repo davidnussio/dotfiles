@@ -28,6 +28,7 @@ if status is-interactive
 
   abbr -a vi nvim
   abbr -a vim nvim
+  abbr -a n nvim
 
   abbr -a efish nvim ~/.config/fish/config.fish
 
@@ -43,9 +44,21 @@ if status is-interactive
   alias lst='tree -a -I "node_modules|.git|.next|dist|__generated__"'
   alias git-clean-branches='git fetch --prune && git gc'
 
+  # File system
+  alias ls='eza -lh --group-directories-first --icons'
+  alias lsa='ls -a'
+  alias lt='eza --tree --level=2 --long --icons --git'
+  alias lta='lt -a'
+  alias ff="fzf --preview 'batcat --style=numbers --color=always {}'"
+  alias fd="fdfind"
+  alias cat="bat"
+
   # Vscode integration
   string match -q "$TERM_PROGRAM" "vscode"
   and . (code --locate-shell-integration-path fish)
+
+  # zoxide integration
+  zoxide init fish | source
 
   # Speed up ... -> ../.
   function expand-dot-to-parent-directory-path -d 'expand ... to ../.. etc'

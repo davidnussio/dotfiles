@@ -14,4 +14,23 @@
 #   source $DOTFILES_PATH/bin/dotfiles-features
 # fi
 
-echo "system"
+COMMAND=$(gum choose "Install" "Update" "Quit" --height 10 --header "" | tr '[:upper:]' '[:lower:]')
+
+if [[ $COMMAND == "quit" ]]; then
+    exit 0
+fi
+
+case $COMMAND in
+    "install")
+      elevateUser
+      sudo gum spin --title "Update system" -- apt update
+      sudo gum spin --title "Upgrade system" -- apt full-upgrade -y
+      source $DOTFILES_PATH/features/flatpack/install.sh $COMMAND
+      source $DOTFILES_PATH/features/brew/install.sh $COMMAND
+      ;;
+    "update")
+      topgrade
+      ;;
+    *)
+      exit 0
+esac

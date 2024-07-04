@@ -1,23 +1,15 @@
 #!/bin/bash -i
 
-DOTFILES_ASCII='
-   _____       _    __ _ _
-  |  __ \     | |  / _(_) |
-  | |  | | ___| |_| |_ _| | ___  ___
-  | |  | |/   \ __|  _| | |/ _ \/ __|
-  | |__| |  O | |_| | | | |  __/\__ \
-  |_____/ \___|\__|_| |_|_|\___||___/
-'
+# set -x
 
-colors=(
-	'\033[38;5;81m' # Cyan
-	'\033[38;5;75m' # Light Blue
-	'\033[38;5;69m' # Sky Blue
-	'\033[38;5;63m' # Dodger Blue
-	'\033[38;5;57m' # Deep Sky Blue
-	'\033[38;5;51m' # Cornflower Blue
-	'\033[38;5;45m' # Royal Blue
-)
+DOTFILES_PATH=$HOME/dotfiles
+
+[[ $- != *i* ]] && {
+    printf "🔥 Rerun in interactive mode: $ bash -i ./install.sh\n"
+    exit 1
+}
+
+source $DOTFILES_PATH/scripts/variables.sh
 
 # Split the ASCII art into lines
 IFS=$'\n' read -rd '' -a lines <<<"$DOTFILES_ASCII"
@@ -28,17 +20,10 @@ for i in "${!lines[@]}"; do
 	echo -e "${colors[color_index]}${lines[i]}"
 done
 
-DOTFILES_PATH=$HOME/dotfiles
 
-
-[[ $- != *i* ]] && {
-    printf "🔥 Rerun in interactive mode: $ bash -i ./install.sh\n"
-    exit 1
-}
-
-source $DOTFILES_PATH/install/functions.sh
-source $DOTFILES_PATH/features/gum/install.sh install &>> /dev/null
+source $DOTFILES_PATH/scripts/functions.sh
+source $DOTFILES_PATH/scripts/startup.sh
 clear
 echo "🚀 Welcome to DOTFILES CLI"
 source $DOTFILES_PATH/bin/dotfiles-menu
-
+source $DOTFILES_PATH/scripts/cleanup.sh

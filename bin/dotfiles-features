@@ -2,4 +2,11 @@ FEATURES=$(ls -d $DOTFILES_PATH/features/*/install.sh | xargs dirname | sed "s|$
 
 INSTALLER=$(gum choose $FEATURES Quit --height 10 --header "" | tr '[:upper:]' '[:lower:]')
 
+COMMAND=$(gum choose "Install" "Update" "Quit" --height 10 --header "" | tr '[:upper:]' '[:lower:]')
+
+if [[ $COMMAND == "quit" ]]; then
+    exit 0
+fi
+
 [ -f "features/$INSTALLER/install.sh" ] && gum confirm "Run installer?" && source "features/$INSTALLER/install.sh" $COMMAND
+

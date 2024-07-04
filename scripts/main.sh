@@ -2,7 +2,6 @@
 
 case $1 in
   install)
-    echo
     echo "📦 Install $PACKAGE_NAME"
     install
     ;;

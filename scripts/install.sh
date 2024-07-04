@@ -47,24 +47,24 @@ shopt -s expand_aliases
 command -v sudo >/dev/null 2>&1 || { alias sudo='dummySudo'; }
 
 
-elevateUser
-printf "🔄 Updating system\n"
-sudo apt update &>>$LOGFILE && sudo apt full-upgrade -y &>>$LOGFILE
+# elevateUser
+# printf "🔄 Updating system\n"
+# sudo apt update &>>$LOGFILE && sudo apt full-upgrade -y &>>$LOGFILE
 
 # Configure watches
-elevateUser
-printf "🧬 Configure sysctl inotify\n"
-grep -q "fs.inotify.max_user_watches" /etc/sysctl.conf
-if [[ $? != 0 ]]; then
-    echo "fs.inotify.max_user_watches=524288" | sudo tee -a /etc/sysctl.conf &>>$LOGFILE
-    sudo sysctl -p &>>$LOGFILE
-fi
+# elevateUser
+# printf "🧬 Configure sysctl inotify\n"
+# grep -q "fs.inotify.max_user_watches" /etc/sysctl.conf
+# if [[ $? != 0 ]]; then
+#     echo "fs.inotify.max_user_watches=524288" | sudo tee -a /etc/sysctl.conf &>>$LOGFILE
+#     sudo sysctl -p &>>$LOGFILE
+# fi
 
 # Install base packages
-elevateUser
-printf "📦 Remove apt packages\n"
-sudo apt remove -y vim-common vim-tiny &>>$LOGFILE
-sudo apt autoremove -y &>>$LOGFILE
+# elevateUser
+# printf "📦 Remove apt packages\n"
+# sudo apt remove -y vim-common vim-tiny &>>$LOGFILE
+# sudo apt autoremove -y &>>$LOGFILE
 
 
 elevateUser
@@ -124,42 +124,42 @@ reloadShProfile
 #   flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo &>>$LOGFILE
 # fi
 
-# Install brew
-printf "📦 Install brew\n"
-if [[ ! -d "/home/linuxbrew/.linuxbrew" ]]; then
-  elevateUser
-  curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash
-  test -d ~/.linuxbrew && eval "$(~/.linuxbrew/bin/brew shellenv)"
-  test -d /home/linuxbrew/.linuxbrew && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-fi
+# # Install brew
+# printf "📦 Install brew\n"
+# if [[ ! -d "/home/linuxbrew/.linuxbrew" ]]; then
+#   elevateUser
+#   curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash
+#   test -d ~/.linuxbrew && eval "$(~/.linuxbrew/bin/brew shellenv)"
+#   test -d /home/linuxbrew/.linuxbrew && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+# fi
 
 # Install brew deps
 printf "📦 Install brew packages\n"
 brew tap libsql/sqld &>>$LOGFILE
-brew install fish gcc go topgrade fzf mdless the_silver_searcher oha rust diff-so-fancy \
-kubernetes-cli helm vercel-cli firebase-cli starship fd fisher redpanda-data/tap/redpanda oven-sh/bun/bun \
-prettier fnm neovim &>>$LOGFILE
+brew install __fish gcc go topgrade fzf mdless the_silver_searcher oha rust diff-so-fancy \
+kubernetes-cli helm vercel-cli firebase-cli starship fd __fisher redpanda-data/tap/redpanda oven-sh/bun/bun \
+prettier fnm __neovim &>>$LOGFILE
 
 # Install github cli
-printf "📦 Github cli\n"
-if [[ ! $(which gh) ]]; then
-    brew install gh &>>$LOGFILE
-fi
+# printf "📦 Github cli\n"
+# if [[ ! $(which gh) ]]; then
+#     brew install gh &>>$LOGFILE
+# fi
 
 # Install AstroNvim
-printf "📦 Install AstroNvim\n"
-if [[ ! -d $HOME/.config/nvim ]]; then
-    rm -rf ~/.config/nvim ~/.local/share/nvim ~/.local/state/nvim ~/.cache/nvim  &>>$LOGFILE
-    git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim --depth 1 &>>$LOGFILE
-fi
+# printf "📦 Install AstroNvim\n"
+# if [[ ! -d $HOME/.config/nvim ]]; then
+#     rm -rf ~/.config/nvim ~/.local/share/nvim ~/.local/state/nvim ~/.cache/nvim  &>>$LOGFILE
+#     git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim --depth 1 &>>$LOGFILE
+# fi
 
 # Install neovim for root (aka sudo cmd)
-sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/nvim &>>$LOGFILE
-sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vim &>>$LOGFILE
-sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vi &>>$LOGFILE
+# sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/nvim &>>$LOGFILE
+# sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vim &>>$LOGFILE
+# sudo ln -s /home/linuxbrew/.linuxbrew/bin/nvim /usr/bin/vi &>>$LOGFILE
 
-sudo update-alternatives --install /usr/bin/editor editor /home/linuxbrew/.linuxbrew/bin/nvim 100 &>>$LOGFILE
-sudo update-alternatives --config x-terminal-emulator /usr/bin/kitty 100 &>>$LOGFILE
+# sudo update-alternatives --install /usr/bin/editor editor /home/linuxbrew/.linuxbrew/bin/nvim 100 &>>$LOGFILE
+# sudo update-alternatives --config x-terminal-emulator /usr/bin/kitty 100 &>>$LOGFILE
 
 #	sudo update-alternatives --set editor
 
@@ -167,13 +167,14 @@ printf "📦 Stow config to user .config\n"
 rm -rf .config/{fish,nvim,kitty} &>>$LOGFILE
 stow config --target ~/.config &>>$LOGFILE
 
-printf "⚙️ Install miniconda\n"
-if [[ ! -d $HOME/miniconda3 ]]; then
-  mkdir -p ~/miniconda3
-  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh &>>$LOGFILE
-  bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 &>>$LOGFILE
-  rm -rf ~/miniconda3/miniconda.sh
-fi
+# printf "⚙️ Install miniconda\n"
+# if [[ ! -d $HOME/miniconda3 ]]; then
+#   mkdir -p ~/miniconda3
+#   wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh &>>$LOGFILE
+#   bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 &>>$LOGFILE
+#   rm -rf ~/miniconda3/miniconda.sh
+# fi
+
 printf "🏢 Install GUI tools? ${INSTALL_DEV_GUI_TOOLS}\n"
 if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
   elevateUser
@@ -251,13 +252,13 @@ fnm default 20 &>>$LOGFILE
 printf "📦 Install pnpm\n"
 corepack prepare pnpm@latest --activate &>>$LOGFILE
 
-# Change default shell
-printf "📦 Change default shell to fish\n"
-grep -q '/home/linuxbrew/.linuxbrew/bin/fish' /etc/shells || echo '/home/linuxbrew/.linuxbrew/bin/fish' | sudo tee -a /etc/shells
-sudo chsh $USER -s $DEFAULT_SHELL &>>$LOGFILE
+# # Change default shell
+# printf "📦 Change default shell to fish\n"
+# grep -q '/home/linuxbrew/.linuxbrew/bin/fish' /etc/shells || echo '/home/linuxbrew/.linuxbrew/bin/fish' | sudo tee -a /etc/shells
+# sudo chsh $USER -s $DEFAULT_SHELL &>>$LOGFILE
 
-# Install fisher libs
-fisher install jorgebucaran/fisher jethrokuan/z jethrokuan/fzf jorgebucaran/autopair.fish &>>$LOGFILE
+# # Install fisher libs
+# fisher install jorgebucaran/fisher jethrokuan/z jethrokuan/fzf jorgebucaran/autopair.fish &>>$LOGFILE
 
 # Print
 printf "✅ All done! \n"
