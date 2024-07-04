@@ -30,7 +30,6 @@ done
 
 DOTFILES_PATH=$HOME/dotfiles
 
-echo "🚀 Welcome to DOTFILES CLI"
 
 [[ $- != *i* ]] && {
     printf "🔥 Rerun in interactive mode: $ bash -i ./install.sh\n"
@@ -38,5 +37,8 @@ echo "🚀 Welcome to DOTFILES CLI"
 }
 
 source $DOTFILES_PATH/install/functions.sh
+source $DOTFILES_PATH/features/gum/install.sh install &>> /dev/null
+clear
+echo "🚀 Welcome to DOTFILES CLI"
 source $DOTFILES_PATH/bin/dotfiles-menu
 
