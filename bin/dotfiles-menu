@@ -1,4 +1,4 @@
-COMMAND=$(gum choose "Features" "System" "Quit" --height 10 --header "" | tr '[:upper:]' '[:lower:]')
+COMMAND=$(gum choose "Features" "Migration" "System" "Quit" --height 10 --header "" | tr '[:upper:]' '[:lower:]')
 
 case $COMMAND in
     "features")
@@ -6,6 +6,9 @@ case $COMMAND in
         ;;
     "system")
         source $DOTFILES_PATH/bin/dotfiles-system
+        ;;
+    "migration")
+        source $DOTFILES_PATH/bin/dotfiles-migration
         ;;
     *)
      exit 0

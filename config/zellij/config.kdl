@@ -1,2 +1,10 @@
 theme "atom-dark"
 on_force_close "quit"
+default_shell "fish"
+copy_command "wl-copy"
+// default_layout "compact"
+copy_on_select true
+
+keybinds {
+    unbind "Ctrl g"
+}

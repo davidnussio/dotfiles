@@ -104,3 +104,6 @@ if not string match -q -- "/home/david/bin" $PATH
 end
 # bit end
 
+# if status is-interactive
+#     eval (zellij setup --generate-auto-start fish | string collect)
+# end

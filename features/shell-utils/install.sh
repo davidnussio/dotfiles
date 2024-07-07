@@ -13,8 +13,11 @@ install() {
     echo "✅ $PACKAGE_NAME is already installed"
     return
   fi
-  gum spin --title "Install shell utils" -- brew install fzf mdless the_silver_searcher \
-  zellij oha diff-so-fancy fd fnm eza bat dust ripgrep
+  gum spin --title "Install shell utils" -- \
+  brew install fzf mdless the_silver_searcher \
+  zellij oha diff-so-fancy fd fnm eza bat dust ripgrep \
+  topgrade oven-sh/bun/bun redpanda-data/tap/redpanda\
+  helm kubernetes-cli
 }
 
 update() {

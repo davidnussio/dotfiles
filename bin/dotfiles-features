@@ -10,3 +10,4 @@ fi
 
 [ -f "features/$INSTALLER/install.sh" ] && gum confirm "Run installer?" && source "features/$INSTALLER/install.sh" $COMMAND
 
+source $DOTFILES_PATH/bin/dotfiles-features

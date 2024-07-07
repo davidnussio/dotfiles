@@ -136,7 +136,7 @@ reloadShProfile
 # Install brew deps
 printf "📦 Install brew packages\n"
 brew tap libsql/sqld &>>$LOGFILE
-brew install __fish gcc go topgrade fzf mdless the_silver_searcher oha rust diff-so-fancy \
+brew install __fish gcc go topgrade __fzf __mdless __the_silver_searcher oha rust diff-so-fancy \
 kubernetes-cli helm vercel-cli firebase-cli starship fd __fisher redpanda-data/tap/redpanda oven-sh/bun/bun \
 prettier fnm __neovim &>>$LOGFILE
 
@@ -177,10 +177,10 @@ stow config --target ~/.config &>>$LOGFILE
 
 printf "🏢 Install GUI tools? ${INSTALL_DEV_GUI_TOOLS}\n"
 if [[ $INSTALL_DEV_GUI_TOOLS == 'y' ]]; then
-  elevateUser
-  printf "📦 Install apt ui packages"
-  echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula boolean true" | sudo debconf-set-selections
-  sudo apt install -y gnome-tweaks ttf-mscorefonts-installer &>>$LOGFILE
+  # elevateUser
+  # printf "📦 Install apt ui packages"
+  # echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula boolean true" | sudo debconf-set-selections
+  # sudo apt install -y gnome-tweaks ttf-mscorefonts-installer &>>$LOGFILE
 
   # Google
   printf "📦 Install google apt repo and packages"
