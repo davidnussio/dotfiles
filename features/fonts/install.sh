@@ -19,12 +19,10 @@ set_font() {
   fi
 
   gsettings set org.gnome.desktop.interface monospace-font-name "$font_name 10"
-  cp "$OMAKUB_PATH/fonts/alacritty/$file_name.toml" ~/.config/alacritty/font.toml
-  sed -i "s/\"editor.fontFamily\": \".*\"/\"editor.fontFamily\": \"$font_name\"/g" ~/.config/Code/User/settings.json
 }
 
 isInstalled() {
-    return 0
+    return 1
 }
 
 install() {
