@@ -2,6 +2,10 @@
 
 # set -x
 
+trap 'echo "(exit) 🧹 Cleaning up..."; source $DOTFILES_PATH/scripts/cleanup.sh' EXIT
+trap 'echo "(int) 🧹 Cleaning up..."; source $DOTFILES_PATH/scripts/cleanup.sh' INT
+
+
 DOTFILES_PATH=$HOME/dotfiles
 
 [[ $- != *i* ]] && {
@@ -10,20 +14,7 @@ DOTFILES_PATH=$HOME/dotfiles
 }
 
 source $DOTFILES_PATH/scripts/variables.sh
-
-# Split the ASCII art into lines
-IFS=$'\n' read -rd '' -a lines <<<"$DOTFILES_ASCII"
-
-# Print each line with the corresponding color
-for i in "${!lines[@]}"; do
-	color_index=$((i % ${#colors[@]}))
-	echo -e "${colors[color_index]}${lines[i]}"
-done
-
-
 source $DOTFILES_PATH/scripts/functions.sh
 source $DOTFILES_PATH/scripts/startup.sh
-clear
-echo "🚀 Welcome to DOTFILES CLI"
+
 source $DOTFILES_PATH/bin/dotfiles-menu
-source $DOTFILES_PATH/scripts/cleanup.sh

@@ -12,9 +12,6 @@ if status is-interactive
   # Add brew path
   /home/linuxbrew/.linuxbrew/bin/brew shellenv | source
 
-  # Add fnm path
-  fnm env --use-on-cd --shell fish | source
-
   # Commands to run in interactive sessions can go here
   starship init fish | source
 
@@ -53,14 +50,7 @@ if status is-interactive
   alias fd="fdfind"
   alias cat="bat"
 
-  # Vscode integration
-  string match -q "$TERM_PROGRAM" "vscode"
-  and . (code --locate-shell-integration-path fish)
-
-  # zoxide integration
-  zoxide init fish | source
-
-  # Speed up ... -> ../.
+  # # Speed up ... -> ../.
   function expand-dot-to-parent-directory-path -d 'expand ... to ../.. etc'
     # Get commandline up to cursor
     set -l cmd (commandline --cut-at-cursor)
@@ -86,17 +76,7 @@ if status is-interactive
   and . ~/.config/fish/config-local.fish
 end
 
-# pnpm
-set -gx PNPM_HOME "/home/david/.local/share/pnpm"
-if not string match -q -- $PNPM_HOME $PATH
-  set -gx PATH "$PNPM_HOME" $PATH
-end
-# pnpm end
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-eval /home/david/miniconda3/bin/conda "shell.fish" "hook" $argv | source
-# <<< conda initialize <<<
 
 # bit
 if not string match -q -- "/home/david/bin" $PATH
