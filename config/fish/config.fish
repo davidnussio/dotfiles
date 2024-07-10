@@ -42,8 +42,10 @@ if status is-interactive
   alias git-clean-branches='git fetch --prune && git gc'
 
   # File system
-  alias ls='eza -lh --group-directories-first --icons'
+  alias ls='eza'
   alias lsa='ls -a'
+  alias ll='eza -lh --group-directories-first --icons'
+  alias lla='ll -a'
   alias lt='eza --tree --level=2 --long --icons --git'
   alias lta='lt -a'
   alias ff="fzf --preview 'batcat --style=numbers --color=always {}'"

@@ -1,18 +1,24 @@
 printHeader
 
-COMMAND=$(gum choose "Features" "DevEnv" "Migration" "System" "Quit" --height 10 --header "" | tr '[:upper:]' '[:lower:]')
+COMMAND=$(gum choose "Features" "DevEnv" "Config" "Migration" "System" "Quit" --height 10 --header "" | tr '[:upper:]' '[:lower:]')
 
 case $COMMAND in
     "features")
         source $DOTFILES_PATH/bin/dotfiles-features
         ;;
     "devenv")
-        source $DOTFILES_PATH/bin/dotfiles-dev-env
+        source $DOTFILES_PATH/bin/dotfiles-devenv
+        ;;
+    "config")
+        source $DOTFILES_PATH/bin/dotfiles-config
         ;;
     "migration")
         source $DOTFILES_PATH/bin/dotfiles-migration
         ;;
     "system")
         source $DOTFILES_PATH/bin/dotfiles-system
+        ;;
+    *)
+        exit 0
         ;;
 esac

@@ -2,15 +2,12 @@
 
 case $1 in
   install)
-    echo "📦 Install $PACKAGE_NAME"
     install
     ;;
   update)
-    echo "🌀 Updating $PACKAGE_NAME"
     update
     ;;
   uninstall)
-    echo "🚮 Uninstalling $PACKAGE_NAME"
     uninstall
     ;;
   *)
