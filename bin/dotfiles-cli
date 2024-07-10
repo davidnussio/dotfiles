@@ -1,0 +1,20 @@
+#!/bin/bash -i
+
+# set -x
+
+trap 'echo "(exit) 🧹 Cleaning up..."; source $DOTFILES_PATH/scripts/cleanup.sh' EXIT
+trap 'echo "(int) 🧹 Cleaning up..."; source $DOTFILES_PATH/scripts/cleanup.sh' INT
+
+
+DOTFILES_PATH=$HOME/dotfiles
+
+[[ $- != *i* ]] && {
+    printf "🔥 Rerun in interactive mode: $ bash -i ./install.sh\n"
+    exit 1
+}
+
+source $DOTFILES_PATH/scripts/variables.sh
+source $DOTFILES_PATH/scripts/functions.sh
+source $DOTFILES_PATH/scripts/startup.sh
+
+source $DOTFILES_PATH/bin/dotfiles-menu

@@ -1,0 +1,21 @@
+
+MIGRATIONS=$(ls $DOTFILES_PATH/migrations/*.sh | xargs basename)
+
+INSTALLER=$(gum choose $MIGRATIONS Quit --height 10 --header "" | tr '[:upper:]' '[:lower:]')
+
+if [[ $INSTALLER == "quit" ]]; then
+    return 0
+fi
+
+COMMAND=$(gum choose "Continue" "Quit"  --height 10 --header "" | tr '[:upper:]' '[:lower:]')
+
+if [[ $COMMAND == "quit" ]]; then
+    return 0
+fi
+
+echo "- " $MIGRATIONS " --  " $COMMAND
+
+# [ -f "migrations/$INSTALLER/install.sh" ] && gum confirm "Run installer?" && source "migrations/$INSTALLER/install.sh" $COMMAND
+
+source $DOTFILES_PATH/bin/dotfiles-menu
+

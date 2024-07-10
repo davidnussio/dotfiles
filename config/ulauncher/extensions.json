@@ -1,0 +1,23 @@
+{
+    "com.github.pascalbe-dev.ulauncher-repo-opener": {
+        "id": "com.github.pascalbe-dev.ulauncher-repo-opener",
+        "url": "https://github.com/pascalbe-dev/ulauncher-repo-opener",
+        "updated_at": "2024-07-03T14:38:25.378581",
+        "last_commit": "e72ec2961270c32d5b15192abbfc77020f37bbcc",
+        "last_commit_time": "2024-01-29T09:18:00"
+    },
+    "com.github.ulauncher.ulauncher-emoji": {
+        "id": "com.github.ulauncher.ulauncher-emoji",
+        "url": "https://github.com/Ulauncher/ulauncher-emoji",
+        "updated_at": "2024-07-03T14:39:25.572633",
+        "last_commit": "827cfe5e1d2f89f742f811f981759787b0654fa9",
+        "last_commit_time": "2023-11-04T18:37:13"
+    },
+    "com.github.tchar.ulauncher-albert-calculate-anything": {
+        "id": "com.github.tchar.ulauncher-albert-calculate-anything",
+        "url": "https://github.com/tchar/ulauncher-albert-calculate-anything",
+        "updated_at": "2024-07-03T14:39:58.453682",
+        "last_commit": "037965a44e6f6f496e7ad71ec1651b9edfcde32d",
+        "last_commit_time": "2024-05-29T21:57:26"
+    }
+}

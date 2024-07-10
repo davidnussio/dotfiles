@@ -1,0 +1,25 @@
+
+CONFIGS=$(ls $DOTFILES_PATH/config)
+
+SELECTED_CONFIGS=$(echo $CONFIGS | tr ' ' ',')
+
+USER_SELECTED_CONFIGS=$(gum choose $CONFIGS --no-limit --header "Choose a config to install" --selected "$SELECTED_CONFIGS")
+
+for CONFIG in $USER_SELECTED_CONFIGS; do
+  CONFIG_SOURCE=$DOTFILES_PATH/config/$CONFIG
+  CONFIG_DEST=$HOME/.config/$CONFIG
+
+  echo "Linking $CONFIG_SOURCE → $CONFIG_DEST"
+
+  if [ -x $CONFIG_DEST ]; then
+    rm -rf $CONFIG_DEST
+  fi
+
+  ln -sfn $CONFIG_SOURCE $CONFIG_DEST
+
+done
+
+gum spin --title "Linking config files" -- sleep 2
+
+source $DOTFILES_PATH/bin/dotfiles-menu
+

@@ -1,0 +1,27 @@
+COMMAND=$(gum choose "Install" "Update" "Quit" --height 10 --header "" | tr '[:upper:]' '[:lower:]')
+
+if [[ $COMMAND == "quit" ]]; then
+    exit 0
+fi
+
+case $COMMAND in
+    "install")
+      elevateUser
+      [ ! -L $HOME/.local/bin/dotfiles-cli ] && ln -s $DOTFILES_PATH/bin/dotfiles-cli $HOME/.local/bin/dotfiles-cli
+      sudo gum spin --title "Update system" -- apt update
+      sudo gum spin --title "Upgrade system" -- apt full-upgrade -y
+      source $DOTFILES_PATH/features/flatpack/install.sh $COMMAND
+      source $DOTFILES_PATH/features/brew/install.sh $COMMAND
+      source $DOTFILES_PATH/features/mise/install.sh $COMMAND
+
+      for script in $DOTFILES_PATH/features/*/install.sh; do source $script $COMMAND system; done
+
+      source $DOTFILES_PATH/bin/dotfiles-config
+      ;;
+
+    "update")
+      topgrade
+      ;;
+    *)
+      exit 0
+esac
