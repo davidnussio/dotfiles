@@ -1,2 +1,6 @@
 [tools]
 "npm:tsx" = "latest"
+java = "21"
+
+[settings]
+experimental = true

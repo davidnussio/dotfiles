@@ -12,8 +12,11 @@ if status is-interactive
   # Add brew path
   /home/linuxbrew/.linuxbrew/bin/brew shellenv | source
 
+eval /home/david/miniconda3/bin/conda "shell.fish" "hook" $argv | source
   # Commands to run in interactive sessions can go here
   starship init fish | source
+
+  mise activate fish | source
 
   # Node
   # nvm use --silent $node_default_version
@@ -50,7 +53,8 @@ if status is-interactive
   alias lta='lt -a'
   alias ff="fzf --preview 'batcat --style=numbers --color=always {}'"
   alias fd="fdfind"
-  alias cat="bat"
+  alias cat="bat --plain"
+  alias catl="bat"
 
   # # Speed up ... -> ../.
   function expand-dot-to-parent-directory-path -d 'expand ... to ../.. etc'
