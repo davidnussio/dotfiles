@@ -1,0 +1,51 @@
+--- /opt/pulsesecure/resource/Window_Style.css	2024-07-12 17:10:17.550656290 +0200
++++ /opt/pulsesecure/resource/Window_Style.css	2024-07-12 13:59:00.126250493 +0200
+@@ -1,7 +1,7 @@
+ frame {border-style:solid;border-width:3px;border-color:#898989;border-radius:8px;}
+-label{font:12px Serif;color:black}
++label{font:12px Serif;color:lightgrey}
+ menubar {
+-    background-color:@bg_color;color:black;
++    background-color:@bg_color;color:lightgrey;
+ 	border:@bg_color;
+ }
+
+@@ -10,7 +10,7 @@
+ }
+
+ menuitem{
+-	background-color:@bg_color;font:18px Serif;color:black;
++	background-color:@bg_color;font:18px Serif;color:lightgrey;
+ 	border:@bg_color;
+ }
+
+@@ -18,7 +18,7 @@
+ headerbar{
+ 	background-color:lightgrey;
+ }
+-button{font:12px Serif;color:black}
++button{font:12px Serif;color:lightgrey}
+
+ .gridabout{
+         border-right-style:dotted;border-color:black;border-right-width:2px;
+@@ -31,17 +31,17 @@
+
+ button.titlebutton.minimize {
+   background-color: lightgrey;
+-  color: black;
++  color: lightgrey;
+ }
+
+ button.titlebutton.maximize{
+   background-color: lightgrey;
+-  color: black;
++  color: lightgrey;
+ }
+
+ button.titlebutton.close{
+   background-color: transparent;
+-  color: black;
++  color: lightgrey;
+ }
+
+ progress, trough {
