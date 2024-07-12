@@ -9,8 +9,6 @@ fi
 
 [ ! -L $HOME/.local/bin/dotfiles-cli ] && ln -s $DOTFILES_PATH/bin/dotfiles-cli $HOME/.local/bin/dotfiles-cli
 
-gum confirm
-
 # Install gum before starting the setup
 source $DOTFILES_PATH/features/gum/install.sh install &>> /dev/null
 
