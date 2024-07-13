@@ -41,4 +41,4 @@ uninstall() {
   sudo apt remove -y code
 }
 
-. ./scripts/main.sh
+source $DOTFILES_PATH/scripts/main.sh

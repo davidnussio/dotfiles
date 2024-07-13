@@ -43,4 +43,4 @@ uninstall() {
 
 }
 
-. ./scripts/main.sh
+source $DOTFILES_PATH/scripts/main.sh

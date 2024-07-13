@@ -52,4 +52,4 @@ uninstall() {
   rm ~/.local/bin/kitty ~/.local/bin/kitten ~/.local/share/applications/kitty*.desktop ~/.config/autostart/kitty.desktop ~/.config/xdg-terminals.list &>> $LOGFILE
 }
 
-. ./scripts/main.sh
+source $DOTFILES_PATH/scripts/main.sh

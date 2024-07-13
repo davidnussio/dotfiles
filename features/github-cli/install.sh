@@ -35,4 +35,4 @@ uninstall() {
   gum spin --title "Uninstalling $PACKAGE_NAME" -- brew remove gh
 }
 
-. ./scripts/main.sh
+source $DOTFILES_PATH/scripts/main.sh

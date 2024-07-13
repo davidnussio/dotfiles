@@ -35,4 +35,4 @@ uninstall() {
   NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)"
 }
 
-. ./scripts/main.sh
+source $DOTFILES_PATH/scripts/main.sh

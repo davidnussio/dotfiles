@@ -7,7 +7,7 @@ TAR_GZ="pulsesecure-22.7.tgz"
 PACKAGE_NAME="pulse-secure"
 
 isInstalled() {
-  if [[ $(which plxxx) ]]; then
+  if [[ $(which pulsesecure) ]]; then
     return 0
   else
     return 1
@@ -21,7 +21,7 @@ install() {
   fi
 
   elevateUser
-  sudo apt install -y alien
+  sudo apt install -y alien libwebkit2gtk-4.1-0
   mkdir -p /tmp/pulse-secure
   cd /tmp/pulse-secure
   wget $PKG_URL
@@ -47,4 +47,6 @@ uninstall() {
 
 }
 
-. ./scripts/main.sh
+echo "📦 Installing $PACKAGE_NAME... $DOTFILES_PATH/scripts/main.sh"
+
+source $DOTFILES_PATH/scripts/main.sh

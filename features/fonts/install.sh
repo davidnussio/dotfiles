@@ -52,4 +52,4 @@ uninstall() {
   sudo apt remove -y ttf-mscorefonts-installer &>>$LOGFILE
 }
 
-. ./scripts/main.sh
+source $DOTFILES_PATH/scripts/main.sh

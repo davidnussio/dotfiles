@@ -39,4 +39,4 @@ uninstall() {
     redis-tools sqlite3 libsqlite3-0 libmysqlclient-dev
 }
 
-. ./scripts/main.sh
+source $DOTFILES_PATH/scripts/main.sh

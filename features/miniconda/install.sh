@@ -38,4 +38,4 @@ uninstall() {
   rm -rf ~/miniconda3
 }
 
-. ./scripts/main.sh
+source $DOTFILES_PATH/scripts/main.sh

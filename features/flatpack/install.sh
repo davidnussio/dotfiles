@@ -36,4 +36,4 @@ uninstall() {
   sudo apt remove -y flatpak gnome-software-plugin-flatpak &>>$LOGFILE
 }
 
-. ./scripts/main.sh
+source $DOTFILES_PATH/scripts/main.sh

@@ -42,4 +42,4 @@ uninstall() {
   sudo apt remove -y google-chrome-beta
 }
 
-. ./scripts/main.sh
+source $DOTFILES_PATH/scripts/main.sh

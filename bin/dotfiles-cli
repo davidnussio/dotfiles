@@ -6,7 +6,7 @@ trap 'echo "(exit) 🧹 Cleaning up..."; source $DOTFILES_PATH/scripts/cleanup.s
 trap 'echo "(int) 🧹 Cleaning up..."; source $DOTFILES_PATH/scripts/cleanup.sh' INT
 
 
-DOTFILES_PATH=$HOME/dotfiles
+export DOTFILES_PATH=$HOME/dotfiles
 
 [[ $- != *i* ]] && {
     printf "🔥 Rerun in interactive mode: $ bash -i ./install.sh\n"

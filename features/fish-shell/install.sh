@@ -42,4 +42,4 @@ uninstall() {
   brew remove fish fisher
 }
 
-. ./scripts/main.sh
+source $DOTFILES_PATH/scripts/main.sh

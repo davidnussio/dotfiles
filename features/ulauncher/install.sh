@@ -39,4 +39,4 @@ uninstall() {
   sudo add-apt-repository --remove ppa:agornostal/ulauncher -y &>> $LOGFILE
 }
 
-. ./scripts/main.sh
+source $DOTFILES_PATH/scripts/main.sh

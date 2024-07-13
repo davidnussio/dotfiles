@@ -16,9 +16,11 @@ if [[ $COMMAND == "quit" ]]; then
     exit 0
 fi
 
-if [ -f "features/$INSTALLER/install.sh" ]; then
-  gum spin --title "$COMMAND $INSTALLER " -- \
-  bash -c "source $DOTFILES_PATH/scripts/variables.sh; source $DOTFILES_PATH/scripts/functions.sh; source features/$INSTALLER/install.sh $COMMAND"
+
+
+if [ -f "$DOTFILES_PATH/features/$INSTALLER/install.sh" ]; then
+  gum spin --title "📦 $COMMAND $INSTALLER" -- \
+  bash -c "source $DOTFILES_PATH/scripts/variables.sh; source $DOTFILES_PATH/scripts/functions.sh; source $DOTFILES_PATH/features/$INSTALLER/install.sh $COMMAND"
 fi
 
 source $DOTFILES_PATH/bin/dotfiles-features
