@@ -1,7 +1,7 @@
 abbr gcm "git checkout master"
 abbr gcb "git checkout -b"
 abbr gco "git checkout"
-abbr gbback "git checkout -"
+abbr gbb "git checkout -"
 abbr g "git"
 abbr ga "git add"
 abbr gc "git commit"
