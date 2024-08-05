@@ -1,6 +1,7 @@
 [tools]
 "npm:tsx" = "latest"
 java = "21"
+bun = "latest"
 
 [settings]
 experimental = true

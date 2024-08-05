@@ -10,7 +10,7 @@ if [[ $INSTALLER == "quit" ]]; then
     exit 0
 fi
 
-COMMAND=$(gum choose "Install" "Update" "Quit" --height 10 --header "FEATURES" | tr '[:upper:]' '[:lower:]')
+COMMAND=$(gum choose "Install" "Update" "Uninstall" "Quit" --height 10 --header "FEATURES" | tr '[:upper:]' '[:lower:]')
 
 if [[ $COMMAND == "quit" ]]; then
     exit 0
