@@ -5,16 +5,13 @@ return {
     opts = {
       mappings = {
         -- first key is the mode
-        n = {
-
-        },
+        n = {},
         t = {
           -- setting a mapping to false will disable it
           -- ["<esc>"] = false,
+          ["<esc>"] = "<C-\\><C-n>",
         },
-        i = {
-
-        }
+        i = {},
       },
     },
   },
@@ -23,9 +20,7 @@ return {
     ---@type AstroLSPOpts
     opts = {
       mappings = {
-        n = {
-
-        },
+        n = {},
       },
     },
   },
