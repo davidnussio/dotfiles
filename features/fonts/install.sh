@@ -35,7 +35,7 @@ install() {
   echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula boolean true" | sudo debconf-set-selections
   sudo apt install -y ttf-mscorefonts-installer &>>$LOGFILE
 
-  set_font "FiraMono Nerd Font" "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/FiraCode.zip" "ttf"
+set_font "FiraMono Nerd Font" "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/FiraCode.zip" "ttf"
 }
 
 update() {

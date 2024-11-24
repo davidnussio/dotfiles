@@ -19,7 +19,7 @@ install() {
   fi
   elevateUser
   curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash
-  test -d ~/.linuxbrew && eval "$(~/.linuxbrew/bin/brew shellenv)"
+  # test -d ~/.linuxbrew && eval "$(~/.linuxbrew/bin/brew shellenv)"
   test -d /home/linuxbrew/.linuxbrew && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 }
 

@@ -2,7 +2,7 @@
 [include]
   path = ~/.gitconfig.local
 [includeIf "gitdir:~/dev/eoc/"]
-  path = ~/dev/eoc/.gitconfig.eoc
+  path = ~/.gitconfig.eoc
 [core]
   autocrlf = input
 [color]

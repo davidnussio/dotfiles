@@ -1,7 +1,7 @@
 # This file contains fish universal variable definitions.
 # VERSION: 3.0
-SETUVAR --export ANDROID_HOME:/home/david/Android/Sdk
-SETUVAR --export ANDROID_SDK_ROOT:/home/david/Android/Sdk
+SETUVAR --export ANDROID_HOME:/Users/david/Android/Sdk
+SETUVAR --export ANDROID_SDK_ROOT:/Users/david/Android/Sdk
 SETUVAR EDITOR:nvim
 SETUVAR FZF_DEFAULT_OPTS:\x2d\x2dheight\x2040\x25
 SETUVAR FZF_DISABLE_KEYBINDINGS:0
@@ -9,15 +9,15 @@ SETUVAR FZF_LEGACY_KEYBINDINGS:1
 SETUVAR FZF_PREVIEW_DIR_CMD:ls
 SETUVAR FZF_PREVIEW_FILE_CMD:head\x20\x2dn\x2010
 SETUVAR FZF_TMUX_HEIGHT:40\x25
-SETUVAR --export MAVEN_OPTS:\x2dagentpath\x3a/home/david/\x2ejrebel/jrebel/lib/libjrebel64\x2eso
+SETUVAR --export MAVEN_OPTS:\x2dagentpath\x3a/Users/david/\x2ejrebel/jrebel/lib/libjrebel64\x2eso
 SETUVAR ZO_CMD:zo
 SETUVAR Z_CMD:z
-SETUVAR Z_DATA:/home/david/\x2elocal/share/z/data
-SETUVAR Z_DATA_DIR:/home/david/\x2elocal/share/z
-SETUVAR Z_EXCLUDE:\x5e/home/david\x24
+SETUVAR Z_DATA:/Users/david/\x2elocal/share/z/data
+SETUVAR Z_DATA_DIR:/Users/david/\x2elocal/share/z
+SETUVAR Z_EXCLUDE:\x5e/Users/david\x24
 SETUVAR __fish_initialized:3400
-SETUVAR _fish_abbr_efish:nvim\x20/home/david/\x2econfig/fish/config\x2efish
-SETUVAR _fish_abbr_fsource:source\x20/home/david/\x2econfig/fish/config\x2efish
+SETUVAR _fish_abbr_efish:nvim\x20/Users/david/\x2econfig/fish/config\x2efish
+SETUVAR _fish_abbr_fsource:source\x20/Users/david/\x2econfig/fish/config\x2efish
 SETUVAR _fish_abbr_npm_2D_audit_2D_all:npm\x20audit\x20\x2d\x2dregistry\x20https\x3a//registry\x2enpmjs\x2eorg
 SETUVAR _fish_abbr_o:xdg\x2dopen
 SETUVAR _fish_abbr_vi:nvim

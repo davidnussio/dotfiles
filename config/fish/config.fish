@@ -10,9 +10,8 @@ if status is-interactive
   bind \e\[3\;5~ kill-word
 
   # Add brew path
-  /home/linuxbrew/.linuxbrew/bin/brew shellenv | source
+  /opt/homebrew/bin/brew shellenv | source
 
-  eval /home/david/miniconda3/bin/conda "shell.fish" "hook" $argv | source
   # Commands to run in interactive sessions can go here
   starship init fish | source
 

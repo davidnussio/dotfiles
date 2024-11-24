@@ -18,7 +18,7 @@ install() {
     return
   fi
 
-  brew install fish fisher starship
+brew install fish fisher starship
   # Change default shell
   printf "📦 Change default shell to fish\n"
   grep -q '/home/linuxbrew/.linuxbrew/bin/fish' /etc/shells || echo '/home/linuxbrew/.linuxbrew/bin/fish' | sudo tee -a /etc/shells

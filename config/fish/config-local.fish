@@ -1,1 +1,0 @@
-/home/david/dotfiles-eoc/config-local.fish
