@@ -2,10 +2,12 @@
 
 if OS.mac?
   tap "davidnussio/homebrew-cask"
+  tap "lotyp/homebrew-formulae"
 
   # OS specific tools
   brew "noti" # Notification tool
   brew "mas" # Mac App Store CLI
+  brew "lotyp/formulae/dockutil" # Dock management tool
 
   # Apps
   cask "google-chrome@beta" # Web browser
@@ -17,9 +19,11 @@ if OS.mac?
   cask "zoom" # Video conferencing
   cask "dbeaver-community" # Database management tool
   cask "mongodb-compass" # MongoDB GUI
-  cask "appflowy" #
-  cask "alt-tab" # Window switcher
+  # cask "appflowy" #
+  cask "notion" # Note-taking app
   cask "hiddenbar" # Menu bar manager
+  cask "discord" # Chat app
+  cask "vmware-horizon-client" # VDI client
 
   # Dev Tools
   cask "visual-studio-code" # Code editor
@@ -29,10 +33,9 @@ if OS.mac?
   cask "font-fira-code" # Programming font
   cask "font-symbols-only-nerd-font" # Nerd font symbols
   cask "font-jetbrains-mono" # Programming font
-  cask "font-cascadia-mono" # Programming font
   cask "font-recursive-code" # Programming font
   cask "font-monaspace" # Monospaced font
-  cask "notunes" # Prevent iTunes from opening
+  # cask "notunes" # Prevent iTunes from opening
 end
 
 # Command-line tools
@@ -59,3 +62,6 @@ brew "colima" # Container runtime
 brew "docker" # Container runtime
 brew "podman" # Container runtime
 brew "kubectl" # Kubernetes CLI
+brew "croc" # Secure file transfer
+brew "vercel-cli" # Vercel CLI
+brew "firebase-cli" # Firebase CLI

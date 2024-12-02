@@ -274,6 +274,10 @@ setup_macos() {
     echo "Enable Safari’s debug menu"
     defaults write com.apple.Safari IncludeInternalDebugMenu -bool true
 
+    echo "Save screenshots to the appropriate directory"
+    mkdir -p ~/Screenshots
+    defaults write com.apple.screencapture location ~/Screenshots
+
     echo "Fixing Home and End keys in macOS"
     mkdir ~/Library/KeyBindings
     cat <<EOF >>~/Library/KeyBindings/DefaultKeyBinding.dict

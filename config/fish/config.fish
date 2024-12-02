@@ -16,10 +16,10 @@ if status is-interactive
   starship init fish | source
 
   if status is-interactive
-  mise activate fish | source
-else
-  mise activate fish --shims | source
-end
+    mise activate fish | source
+  else
+    mise activate fish --shims | source
+  end
 
   zoxide init fish | source
 
@@ -43,6 +43,8 @@ end
   alias icat "kitty +kitten icat"
 
   alias reload "exec $SHELL -l"
+
+  alias playground "cd ~/Developer/playground && code ."
 
   # Aliases
   alias agi='ag --ignore node_modules --ignore dist --ignore coverage --ignore test --ignore tests --ignore __test__ --ignore __mocks__'
