@@ -65,3 +65,5 @@ brew "kubectl" # Kubernetes CLI
 brew "croc" # Secure file transfer
 brew "vercel-cli" # Vercel CLI
 brew "firebase-cli" # Firebase CLI
+brew "yt-dlp" # YouTube downloader
+brew "ffmpeg" # Multimedia framework
