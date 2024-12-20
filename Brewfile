@@ -8,6 +8,7 @@ if OS.mac?
   brew "noti" # Notification tool
   brew "mas" # Mac App Store CLI
   brew "lotyp/formulae/dockutil" # Dock management tool
+  brew "watch" # Watch command
 
   # Apps
   cask "google-chrome@beta" # Web browser
@@ -24,6 +25,8 @@ if OS.mac?
   cask "hiddenbar" # Menu bar manager
   cask "discord" # Chat app
   cask "vmware-horizon-client" # VDI client
+  cask "notunes" # Prevent iTunes from opening
+
 
   # Dev Tools
   cask "visual-studio-code" # Code editor
@@ -35,7 +38,7 @@ if OS.mac?
   cask "font-jetbrains-mono" # Programming font
   cask "font-recursive-code" # Programming font
   cask "font-monaspace" # Monospaced font
-  # cask "notunes" # Prevent iTunes from opening
+
 end
 
 # Command-line tools
@@ -67,3 +70,4 @@ brew "vercel-cli" # Vercel CLI
 brew "firebase-cli" # Firebase CLI
 brew "yt-dlp" # YouTube downloader
 brew "ffmpeg" # Multimedia framework
+brew "luarocks" # Lua package manager
