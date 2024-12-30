@@ -26,6 +26,8 @@ if OS.mac?
   cask "discord" # Chat app
   cask "vmware-horizon-client" # VDI client
   cask "notunes" # Prevent iTunes from opening
+  cask "ghostty" # Ghost terminal
+  cask "localsend" # Local file sharing
 
 
   # Dev Tools
