@@ -28,6 +28,8 @@ if OS.mac?
   cask "notunes" # Prevent iTunes from opening
   cask "ghostty" # Ghost terminal
   cask "localsend" # Local file sharing
+  cask "balenaetcher" # Flash OS images
+  cask "lm-studio" #
 
 
   # Dev Tools

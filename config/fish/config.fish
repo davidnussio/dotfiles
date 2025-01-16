@@ -100,3 +100,6 @@ end
 # if status is-interactive
 #     eval (zellij setup --generate-auto-start fish | string collect)
 # end
+
+# Added by LM Studio CLI (lms)
+set -gx PATH $PATH /Users/david/.lmstudio/bin
