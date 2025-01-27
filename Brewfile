@@ -75,3 +75,5 @@ brew "firebase-cli" # Firebase CLI
 brew "yt-dlp" # YouTube downloader
 brew "ffmpeg" # Multimedia framework
 brew "luarocks" # Lua package manager
+brew "openfortivpn" # Fortinet VPN client
+
