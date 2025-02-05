@@ -35,6 +35,7 @@ if OS.mac?
   # Dev Tools
   cask "visual-studio-code" # Code editor
   cask "devtoys" # Developer utilities
+  cask "orbstack"
 
   # Fonts
   cask "font-fira-code" # Programming font

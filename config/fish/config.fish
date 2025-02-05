@@ -8,6 +8,9 @@ if status is-interactive
 
   # Set fish binding
   bind \e\[3\;5~ kill-word
+  bind \e\[1\;4D prevd
+  bind \e\[1\;3A prevd
+  bind \e\[1\;4C nextd
 
   # Add brew path
   /opt/homebrew/bin/brew shellenv | source
