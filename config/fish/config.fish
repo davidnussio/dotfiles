@@ -31,7 +31,7 @@ if status is-interactive
 
   # Abbreviations
   abbr -a fsource source ~/.config/fish/config.fish
-  abbr -a o xdg-open
+  abbr -a o open
   abbr -a tw timew
 
   abbr -a vi nvim

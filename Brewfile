@@ -47,6 +47,7 @@ if OS.mac?
 end
 
 # Command-line tools
+brew "htop" # Process viewer
 brew "git" # Version control
 brew "gh" # GitHub CLI
 brew "fish" # Friendly interactive shell
@@ -77,4 +78,9 @@ brew "yt-dlp" # YouTube downloader
 brew "ffmpeg" # Multimedia framework
 brew "luarocks" # Lua package manager
 brew "openfortivpn" # Fortinet VPN client
-
+brew "yazi" # Filesystem manager
+brew "sevenzip" # 7zip
+brew "poppler" # PDF tools
+brew "imagemagick" # Image processing
+brew "tursodatabase/tap/turso" # Database"
+brew "selene" # Lua formatter
