@@ -1,6 +1,6 @@
 # This file contains fish universal variable definitions.
 # VERSION: 3.0
-SETUVAR --export ANDROID_HOME:/Users/david/Android/Sdk
+SETUVAR --export ANDROID_HOME:/Users/david/Library/Android/sdk
 SETUVAR --export ANDROID_SDK_ROOT:/Users/david/Android/Sdk
 SETUVAR EDITOR:nvim
 SETUVAR FZF_DEFAULT_OPTS:\x2d\x2dheight\x20100\x25\x20\x2d\x2dstyle\x20full
@@ -15,7 +15,7 @@ SETUVAR Z_CMD:z
 SETUVAR Z_DATA:/Users/david/\x2elocal/share/z/data
 SETUVAR Z_DATA_DIR:/Users/david/\x2elocal/share/z
 SETUVAR Z_EXCLUDE:\x5e/Users/david\x24
-SETUVAR __fish_initialized:3400
+SETUVAR __fish_initialized:3800
 SETUVAR _fish_abbr_efish:nvim\x20/Users/david/\x2econfig/fish/config\x2efish
 SETUVAR _fish_abbr_fsource:source\x20/Users/david/\x2econfig/fish/config\x2efish
 SETUVAR _fish_abbr_npm_2D_audit_2D_all:npm\x20audit\x20\x2d\x2dregistry\x20https\x3a//registry\x2enpmjs\x2eorg
@@ -45,7 +45,7 @@ SETUVAR fish_color_operator:brcyan
 SETUVAR fish_color_param:cyan
 SETUVAR fish_color_quote:yellow
 SETUVAR fish_color_redirection:cyan\x1e\x2d\x2dbold
-SETUVAR fish_color_search_match:bryellow\x1e\x2d\x2dbackground\x3dbrblack
+SETUVAR fish_color_search_match:white\x1e\x2d\x2dbackground\x3dbrblack
 SETUVAR fish_color_selection:white\x1e\x2d\x2dbold\x1e\x2d\x2dbackground\x3dbrblack
 SETUVAR fish_color_status:red
 SETUVAR fish_color_user:brgreen

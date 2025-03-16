@@ -84,3 +84,5 @@ brew "poppler" # PDF tools
 brew "imagemagick" # Image processing
 brew "tursodatabase/tap/turso" # Database"
 brew "selene" # Lua formatter
+brew "graphviz" # Graph visualization
+brew "nmap" # Network scanner
