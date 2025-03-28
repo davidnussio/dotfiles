@@ -35,7 +35,9 @@ if OS.mac?
   # Dev Tools
   cask "visual-studio-code" # Code editor
   cask "devtoys" # Developer utilities
-  cask "orbstack"
+  cask "orbstack" # Developer utilities
+  cask "obsidian" # Note-taking app
+  cast "bruno" # Developer utilities
 
   # Fonts
   cask "font-fira-code" # Programming font
@@ -65,7 +67,6 @@ brew "ripgrep" # Grep alternative
 brew "jq" # JSON processor
 brew "fzf" # Fuzzy finder
 brew "tmux" # Terminal multiplexer
-brew "tldr" # Simplified man pages
 brew "golang" # Go programming language
 brew "colima" # Container runtime
 brew "docker" # Container runtime
@@ -86,3 +87,4 @@ brew "tursodatabase/tap/turso" # Database"
 brew "selene" # Lua formatter
 brew "graphviz" # Graph visualization
 brew "nmap" # Network scanner
+brew "supabase/tap/supabase"

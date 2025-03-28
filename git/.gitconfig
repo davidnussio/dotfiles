@@ -36,7 +36,7 @@
 [help]
   autocorrect = 1
 [pull]
-  rebase = false
+	rebase = true
 [init]
   defaultBranch = main
 [rerere]
