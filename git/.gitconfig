@@ -18,6 +18,7 @@
 [core]
   excludesfile = /home/david/.gitignore
   editor = nvim
+	ignorecase = false
 [merge]
   tool = meld
 [push]
