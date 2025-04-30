@@ -88,3 +88,6 @@ brew "selene" # Lua formatter
 brew "graphviz" # Graph visualization
 brew "nmap" # Network scanner
 brew "supabase/tap/supabase"
+
+cask "dotnet-sdk" # .NET SDK
+
