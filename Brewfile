@@ -46,6 +46,9 @@ if OS.mac?
   cask "font-recursive-code" # Programming font
   cask "font-monaspace" # Monospaced font
 
+  # Trying apps
+  cask "homerow"
+
 end
 
 # Command-line tools
