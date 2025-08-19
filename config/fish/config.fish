@@ -66,6 +66,8 @@ if status is-interactive
   alias cat="bat --plain"
   alias catl="bat"
 
+  alias getpick="npx -y gitpick@latest"
+
   # # Speed up ... -> ../.
   function expand-dot-to-parent-directory-path -d 'expand ... to ../.. etc'
     # Get commandline up to cursor
