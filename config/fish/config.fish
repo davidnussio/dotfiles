@@ -4,7 +4,7 @@ if status is-interactive
     echo ''
   end
 
-  set fish_cursor_unknown block
+  set -g fish_cursor_unknown block
 
   # Set fish binding
   bind \e\[3\;5~ kill-word
@@ -128,3 +128,6 @@ end
 source ~/.orbstack/shell/init2.fish 2>/dev/null || :
 
 source /nix/var/nix/profiles/default/etc/profile.d/nix.fish
+
+
+fish_vi_key_bindings
