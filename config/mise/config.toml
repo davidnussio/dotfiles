@@ -2,7 +2,7 @@
 "npm:tsx" = "latest"
 java = "21"
 bun = "latest"
-node = "20"
+node = "lts"
 
 [settings]
 experimental = true
