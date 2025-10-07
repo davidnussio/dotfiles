@@ -4,7 +4,7 @@ assume_yes = true
 
 # Disable specific steps - same options as the command line flag
 #disable = ["system", "emacs"]
-disable = ["gcloud", "containers", "vscode", "pnpm", "yarn", "ruby_gems", "node", "nix"]
+disable = ["gcloud", "containers", "vscode", "pnpm", "yarn", "ruby_gems", "node", "nix", "gem"]
 
 # Ignore failures for these steps
 #ignore_failures = ["powershell"]
