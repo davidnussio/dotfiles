@@ -281,6 +281,9 @@ setup_macos() {
     mkdir -p ~/Screenshots
     defaults write com.apple.screencapture location ~/Screenshots
 
+    echo "Disable swipe in trackpad to show notification center"
+    defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadTwoFingerFromRightEdgeSwipeGesture -int 0
+
     echo "Fixing Home and End keys in macOS"
     mkdir ~/Library/KeyBindings
     cat <<EOF >>~/Library/KeyBindings/DefaultKeyBinding.dict
