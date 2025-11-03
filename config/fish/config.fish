@@ -160,4 +160,4 @@ source ~/.orbstack/shell/init2.fish 2>/dev/null || :
 source /nix/var/nix/profiles/default/etc/profile.d/nix.fish
 
 
-fish_vi_key_bindings
+# fish_vi_key_bindings
