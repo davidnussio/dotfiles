@@ -69,35 +69,10 @@ if status is-interactive
   alias getpick="npx -y gitpick@latest"
 
   # Git
-  alias g='git'
-  alias ga='git add'
-  alias gaa='git add .'
-  alias gb='git branch'
-  alias gba='git branch -a'
-  alias gco='git checkout'
-  alias gcm='git commit -m'
-  alias gcam='git commit -am'
-  alias gca='git commit --amend'
-  alias gd='git diff'
-  alias gds='git diff --staged'
-  alias gpl='git stash -u && git pull --rebase && git stash pop'
-  alias gph='git push'
-  alias gpho='git push origin'
-  alias gphu='git push upstream'
-  alias gst='git status'
-  alias gss='git status -s'
-  alias gcl='git clone'
-  alias gcp='git cherry-pick'
-  alias gmt='git mergetool'
-  alias gpl='git pull'
-  alias gplr='git pull --rebase'
-  alias gr='git rebase'
-  alias grs='git restore'
-  alias grss='git restore --staged'
-  alias gsta='git stash'
-  alias gstp='git stash pop'
-  alias gsts='git stash show --text'
-  alias gff='git fetch'
+  abbr -a gpl 'git stash -u && git pull --rebase && git stash pop'
+
+
+
   # # Speed up ... -> ../.
   function expand-dot-to-parent-directory-path -d 'expand ... to ../.. etc'
     # Get commandline up to cursor
