@@ -55,6 +55,7 @@ end
 brew "htop" # Process viewer
 brew "git" # Version control
 brew "gh" # GitHub CLI
+brew "ag" # The silver searcher
 brew "fish" # Friendly interactive shell
 brew "fisher" # Fish shell plugin manager
 brew "starship" # Shell prompt
