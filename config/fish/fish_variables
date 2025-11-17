@@ -10,6 +10,7 @@ SETUVAR FZF_PREVIEW_DIR_CMD:ls
 SETUVAR FZF_PREVIEW_FILE_CMD:head\x20\x2dn\x2010
 SETUVAR FZF_TMUX_HEIGHT:40\x25
 SETUVAR --export MAVEN_OPTS:\x2dagentpath\x3a/Users/david/\x2ejrebel/jrebel/lib/libjrebel64\x2edylib
+SETUVAR --export MISE_ACTIVATE_AGGRESSIVE:true
 SETUVAR ZO_CMD:zo
 SETUVAR Z_CMD:z
 SETUVAR Z_DATA:/Users/david/\x2elocal/share/z/data
@@ -57,4 +58,4 @@ SETUVAR fish_pager_color_prefix:normal\x1e\x2d\x2dbold\x1e\x2d\x2dunderline
 SETUVAR fish_pager_color_progress:brwhite\x1e\x2d\x2dbackground\x3dcyan
 SETUVAR fish_pager_color_selected_background:\x2dr
 SETUVAR fish_user_paths:/Users/david/\x2ecargo/bin
-SETUVAR node_default_version:18
+SETUVAR node_default_version:22

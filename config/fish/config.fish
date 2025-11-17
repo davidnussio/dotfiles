@@ -18,12 +18,6 @@ if status is-interactive
   # Commands to run in interactive sessions can go here
   starship init fish | source
 
-  if status is-interactive
-    mise activate fish | source
-  else
-    mise activate fish --shims | source
-  end
-
   zoxide init fish | source
 
   # Node
@@ -133,6 +127,5 @@ end
 source ~/.orbstack/shell/init2.fish 2>/dev/null || :
 
 source /nix/var/nix/profiles/default/etc/profile.d/nix.fish
-
 
 # fish_vi_key_bindings

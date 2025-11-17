@@ -2,7 +2,7 @@
 "npm:tsx" = "latest"
 java = "21"
 bun = "latest"
-node = "lts"
+# node = "lts"  # Commented out to allow per-project node versions via .mise.toml files
 
 [settings]
 experimental = true
