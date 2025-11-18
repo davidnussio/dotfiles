@@ -20,6 +20,8 @@ if status is-interactive
 
   zoxide init fish | source
 
+  mise activate fish | source
+
   # Node
   # nvm use --silent $node_default_version
 
