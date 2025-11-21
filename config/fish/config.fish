@@ -131,3 +131,6 @@ source ~/.orbstack/shell/init2.fish 2>/dev/null || :
 source /nix/var/nix/profiles/default/etc/profile.d/nix.fish
 
 # fish_vi_key_bindings
+
+# Added by Antigravity
+fish_add_path /Users/david/.antigravity/antigravity/bin
