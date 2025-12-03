@@ -1,9 +1,8 @@
 [tools]
-"npm:tsx" = "latest"
 java = "21"
 bun = "latest"
-# node = "lts"  # Commented out to allow per-project node versions via .mise.toml files
 
 [settings]
+verbose = false
 experimental = true
-idiomatic_version_file_enable_tools = ["node"]
+# idiomatic_version_file_enable_tools = ["node"]

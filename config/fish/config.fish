@@ -20,12 +20,11 @@ if status is-interactive
 
   zoxide init fish | source
 
-  mise activate fish | source
+  if status is-interactive
+    /opt/homebrew/opt/mise/bin/mise activate fish | source
+  end
 
-  # Node
-  # nvm use --silent $node_default_version
-
-  # Abbreviations
+ # Abbreviations
   abbr -a fsource source ~/.config/fish/config.fish
   abbr -a o open
   abbr -a tw timew
@@ -130,7 +129,3 @@ source ~/.orbstack/shell/init2.fish 2>/dev/null || :
 
 source /nix/var/nix/profiles/default/etc/profile.d/nix.fish
 
-# fish_vi_key_bindings
-
-# Added by Antigravity
-fish_add_path /Users/david/.antigravity/antigravity/bin
