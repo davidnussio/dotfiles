@@ -20,10 +20,6 @@ if status is-interactive
 
   zoxide init fish | source
 
-  if status is-interactive
-    /opt/homebrew/opt/mise/bin/mise activate fish | source
-  end
-
  # Abbreviations
   abbr -a fsource source ~/.config/fish/config.fish
   abbr -a o open
