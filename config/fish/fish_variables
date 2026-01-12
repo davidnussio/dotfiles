@@ -16,7 +16,7 @@ SETUVAR Z_CMD:z
 SETUVAR Z_DATA:/Users/david/\x2elocal/share/z/data
 SETUVAR Z_DATA_DIR:/Users/david/\x2elocal/share/z
 SETUVAR Z_EXCLUDE:\x5e/Users/david\x24
-SETUVAR __fish_initialized:3800
+SETUVAR __fish_initialized:4300
 SETUVAR _fish_abbr_efish:nvim\x20/Users/david/\x2econfig/fish/config\x2efish
 SETUVAR _fish_abbr_fsource:source\x20/Users/david/\x2econfig/fish/config\x2efish
 SETUVAR _fish_abbr_npm_2D_audit_2D_all:npm\x20audit\x20\x2d\x2dregistry\x20https\x3a//registry\x2enpmjs\x2eorg
