@@ -1,7 +1,6 @@
 # vim:ft=ruby
 
 if OS.mac?
-  tap "davidnussio/homebrew-cask"
   tap "lotyp/homebrew-formulae"
 
   # OS specific tools
@@ -24,7 +23,7 @@ if OS.mac?
   cask "notion" # Note-taking app
   cask "hiddenbar" # Menu bar manager
   cask "discord" # Chat app
-  cask "vmware-horizon-client" # VDI client
+  cask "omnissa-horizon-client" # VDI client
   cask "notunes" # Prevent iTunes from opening
   cask "ghostty" # Ghost terminal
   cask "localsend" # Local file sharing
@@ -34,10 +33,10 @@ if OS.mac?
 
   # Dev Tools
   cask "visual-studio-code" # Code editor
-  cask "devtoys" # Developer utilities
+  # cask "devtoys" # Developer utilities
   cask "orbstack" # Developer utilities
   cask "obsidian" # Note-taking app
-  cast "bruno" # Developer utilities
+ # cast "bruno" # Developer utilities
 
   # Fonts
   cask "font-fira-code" # Programming font
@@ -82,7 +81,7 @@ brew "firebase-cli" # Firebase CLI
 brew "yt-dlp" # YouTube downloader
 brew "ffmpeg" # Multimedia framework
 brew "luarocks" # Lua package manager
-brew "openfortivpn" # Fortinet VPN client
+#brew "openfortivpn" # Fortinet VPN client
 brew "yazi" # Filesystem manager
 brew "sevenzip" # 7zip
 brew "poppler" # PDF tools
@@ -93,5 +92,5 @@ brew "graphviz" # Graph visualization
 brew "nmap" # Network scanner
 brew "supabase/tap/supabase"
 brew "gemini-cli" # Gemini CLI
-cask "dotnet-sdk" # .NET SDK
+# cask "dotnet-sdk" # .NET SDK
 
