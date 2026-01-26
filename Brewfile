@@ -29,6 +29,7 @@ if OS.mac?
   cask "localsend" # Local file sharing
   cask "balenaetcher" # Flash OS images
   cask "lm-studio" #
+  cask "rectangle" # Window management
 
 
   # Dev Tools
@@ -86,7 +87,6 @@ brew "yazi" # Filesystem manager
 brew "sevenzip" # 7zip
 brew "poppler" # PDF tools
 brew "imagemagick" # Image processing
-brew "tursodatabase/tap/turso" # Database"
 brew "selene" # Lua formatter
 brew "graphviz" # Graph visualization
 brew "nmap" # Network scanner
