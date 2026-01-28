@@ -35,7 +35,8 @@ if OS.mac?
   # Dev Tools
   cask "visual-studio-code" # Code editor
   # cask "devtoys" # Developer utilities
-  cask "orbstack" # Developer utilities
+  # cask "orbstack" # Developer utilities
+  cask "podman-desktop" # Container management
   cask "obsidian" # Note-taking app
  # cast "bruno" # Developer utilities
 
