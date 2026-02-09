@@ -94,4 +94,4 @@ brew "nmap" # Network scanner
 brew "supabase/tap/supabase"
 brew "gemini-cli" # Gemini CLI
 # cask "dotnet-sdk" # .NET SDK
-
+brew "biome"
