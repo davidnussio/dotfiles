@@ -1,7 +1,7 @@
 # Include user settings from a file in the home directory
 [include]
   path = ~/.gitconfig.local
-[includeIf "gitdir:~/dev/eoc/"]
+[includeIf "gitdir:~/Developer/eoc/"]
   path = ~/.gitconfig.eoc
 [core]
   autocrlf = input
@@ -15,6 +15,7 @@
   trustExitCode = true
 [commit]
   verbose = true
+	gpgsign = true
 [core]
   excludesfile = /home/david/.gitignore
   editor = nvim
@@ -44,3 +45,5 @@
 	enabled = true
 [advice]
 	skippedCherryPicks = false
+[tag]
+	gpgSign = true

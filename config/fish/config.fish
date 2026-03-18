@@ -90,8 +90,6 @@ if status is-interactive
   and . ~/.config/fish/config-local.fish
 end
 
-
-
 # bit
 if not string match -q -- "/home/david/bin" $PATH
   set -gx PATH $PATH "/home/david/bin"
@@ -105,6 +103,9 @@ end
 # Added by LM Studio CLI (lms)
 set -gx PATH $PATH /Users/david/.lmstudio/bin
 
+# Added GPG TTY variable
+set -gx GPG_TTY (tty)
+
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 if test -f /opt/homebrew/Caskroom/miniconda/base/bin/conda
@@ -117,6 +118,8 @@ else
     end
 end
 # <<< conda initialize <<<
+
+
 
 
 # Added by OrbStack: command-line tools and integration
