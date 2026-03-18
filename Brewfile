@@ -73,7 +73,6 @@ brew "jq" # JSON processor
 brew "fzf" # Fuzzy finder
 brew "tmux" # Terminal multiplexer
 brew "golang" # Go programming language
-brew "colima" # Container runtime
 brew "docker" # Container runtime
 brew "podman" # Container runtime
 brew "kubectl" # Kubernetes CLI
