@@ -36,7 +36,6 @@ if OS.mac?
   cask "visual-studio-code" # Code editor
   # cask "devtoys" # Developer utilities
   # cask "orbstack" # Developer utilities
-  cask "podman-desktop" # Container management
   cask "obsidian" # Note-taking app
  # cast "bruno" # Developer utilities
 
@@ -74,6 +73,7 @@ brew "fzf" # Fuzzy finder
 brew "tmux" # Terminal multiplexer
 brew "golang" # Go programming language
 brew "docker" # Container runtime
+brew "vsce" # Visual Studio Code
 brew "podman" # Container runtime
 brew "kubectl" # Kubernetes CLI
 brew "croc" # Secure file transfer
