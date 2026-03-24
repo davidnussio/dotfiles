@@ -20,7 +20,7 @@ if OS.mac?
   cask "dbeaver-community" # Database management tool
   cask "mongodb-compass" # MongoDB GUI
   # cask "appflowy" #
-  cask "notion" # Note-taking app
+  # cask "notion" # Note-taking app
   cask "hiddenbar" # Menu bar manager
   cask "discord" # Chat app
   cask "omnissa-horizon-client" # VDI client
@@ -52,6 +52,7 @@ if OS.mac?
 end
 
 # Command-line tools
+brew "davidnussio/homebrew-tap/envsec"
 brew "htop" # Process viewer
 brew "git" # Version control
 brew "gh" # GitHub CLI
@@ -94,6 +95,6 @@ brew "supabase/tap/supabase"
 brew "gemini-cli" # Gemini CLI
 # cask "dotnet-sdk" # .NET SDK
 brew "biome"
-brew "backlog-md"
+# brew "backlog-md"
 cask "claude-code"
 cask "claude"

@@ -1,7 +1,6 @@
 [tools]
 java = "25"
 bun = "latest"
-"npm:envsec" = "beta"
 
 [settings]
 verbose = false
