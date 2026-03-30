@@ -24,6 +24,7 @@ if status is-interactive
   abbr -a fsource source ~/.config/fish/config.fish
   abbr -a o open
   abbr -a tw timew
+  abbr -a e envsec
 
   abbr -a vi nvim
   abbr -a vim nvim
