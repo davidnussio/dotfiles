@@ -129,3 +129,10 @@ source ~/.orbstack/shell/init2.fish 2>/dev/null || :
 
 # source /nix/var/nix/profiles/default/etc/profile.d/nix.fish
 
+# Override: Tab su z mostra il DB zoxide come lista di candidati
+function __zoxide_z_complete
+    set -l tokens (commandline --current-process --tokenize)
+    set -l query $tokens[2..-1]
+    __zoxide_pwd | read -lz curr_dir
+    command zoxide query -l --exclude "$curr_dir" -- $query 2>/dev/null
+end
