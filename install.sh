@@ -284,6 +284,10 @@ setup_macos() {
     echo "Disable swipe in trackpad to show notification center"
     defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadTwoFingerFromRightEdgeSwipeGesture -int 0
 
+    echo "Disable notes"
+    defaults write com.apple.dock wvous-br-corner -int 1
+    defaults write com.apple.dock wvous-br-modifier -int 0
+
     echo "Fixing Home and End keys in macOS"
     mkdir ~/Library/KeyBindings
     cat <<EOF >>~/Library/KeyBindings/DefaultKeyBinding.dict

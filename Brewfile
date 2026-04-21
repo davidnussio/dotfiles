@@ -95,7 +95,9 @@ brew "supabase/tap/supabase"
 brew "gemini-cli" # Gemini CLI
 # cask "dotnet-sdk" # .NET SDK
 brew "biome"
+brew "btop"
 # brew "backlog-md"
 cask "claude-code"
 cask "claude"
 cask "yaak"
+
