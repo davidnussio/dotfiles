@@ -1,6 +1,7 @@
 [tools]
 java = "25"
 bun = "latest"
+node = "24"
 
 [settings]
 verbose = false
