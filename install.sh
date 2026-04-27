@@ -1,309 +1,311 @@
 #!/usr/bin/env bash
 
-DOTFILES="$(pwd)"
-COLOR_GRAY="\033[1;38;5;243m"
-COLOR_BLUE="\033[1;34m"
-COLOR_GREEN="\033[1;32m"
-COLOR_RED="\033[1;31m"
-COLOR_PURPLE="\033[1;35m"
-COLOR_YELLOW="\033[1;33m"
-COLOR_NONE="\033[0m"
+set -euo pipefail
 
-# Configuration home
+DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
 
+# ─── Colors ───────────────────────────────────────────────────────────────────
+R="\033[0m"
+BOLD="\033[1m"
+DIM="\033[2m"
+C_PURPLE="\033[1;35m"
+C_BLUE="\033[1;34m"
+C_CYAN="\033[1;36m"
+C_GREEN="\033[1;32m"
+C_YELLOW="\033[1;33m"
+C_RED="\033[1;31m"
+C_GRAY="\033[38;5;243m"
+
+# ─── UI ───────────────────────────────────────────────────────────────────────
+header() {
+  echo -e "\n${C_PURPLE}${BOLD}"
+  echo -e "  ██████╗  ██████╗ ████████╗███████╗██╗██╗     ███████╗███████╗"
+  echo -e "  ██╔══██╗██╔═══██╗╚══██╔══╝██╔════╝██║██║     ██╔════╝██╔════╝"
+  echo -e "  ██║  ██║██║   ██║   ██║   █████╗  ██║██║     █████╗  ███████╗"
+  echo -e "  ██║  ██║██║   ██║   ██║   ██╔══╝  ██║██║     ██╔══╝  ╚════██║"
+  echo -e "  ██████╔╝╚██████╔╝   ██║   ██║     ██║███████╗███████╗███████║"
+  echo -e "  ╚═════╝  ╚═════╝    ╚═╝   ╚═╝     ╚═╝╚══════╝╚══════╝╚══════╝"
+  echo -e "${R}"
+  echo -e "${C_GRAY}  macOS dotfiles · github.com/davidnussio/dotfiles${R}\n"
+}
+
 title() {
-  echo -e "\n${COLOR_PURPLE}$1${COLOR_NONE}"
-  echo -e "${COLOR_GRAY}==============================${COLOR_NONE}\n"
+  echo -e "\n${C_PURPLE}${BOLD}┌─ $1 ${R}"
+  echo -e "${C_GRAY}│${R}"
+}
+
+step() {
+  echo -e "${C_GRAY}│${R}  ${C_CYAN}▸${R}  $1"
+}
+
+ok() {
+  echo -e "${C_GRAY}│${R}  ${C_GREEN}✔${R}  $1"
+}
+
+skip() {
+  echo -e "${C_GRAY}│${R}  ${C_YELLOW}◌${R}  ${C_GRAY}$1${R}"
+}
+
+warn() {
+  echo -e "${C_GRAY}│${R}  ${C_YELLOW}▲${R}  ${C_YELLOW}$1${R}"
 }
 
 error() {
-  echo -e "${COLOR_RED}Error: ${COLOR_NONE}$1"
+  echo -e "${C_GRAY}│${R}  ${C_RED}✖${R}  ${C_RED}$1${R}"
   exit 1
 }
 
-warning() {
-  echo -e "${COLOR_YELLOW}Warning: ${COLOR_NONE}$1"
+section_end() {
+  echo -e "${C_GRAY}└──────────────────────────────${R}\n"
 }
 
-info() {
-  echo -e "${COLOR_BLUE}Info: ${COLOR_NONE}$1"
+done_msg() {
+  echo -e "\n${C_GREEN}${BOLD}  ╔══════════════════════════╗"
+  echo -e "  ║   All done! Have fun.    ║"
+  echo -e "  ╚══════════════════════════╝${R}\n"
 }
 
-success() {
-  echo -e "${COLOR_GREEN}$1${COLOR_NONE}"
-}
-
+# ─── Commands ─────────────────────────────────────────────────────────────────
 backup() {
-  BACKUP_DIR=$HOME/dotfiles-backup
+  title "Backup"
+  local backup_dir="$HOME/dotfiles-backup"
+  step "Creating backup dir at $backup_dir"
+  mkdir -p "$backup_dir"
 
-  echo "Creating backup directory at $BACKUP_DIR"
-  mkdir -p "$BACKUP_DIR"
-
-  for filename in "$HOME/.config/nvim" "$HOME/.vim" "$HOME/.vimrc"; do
-    if [ ! -L "$filename" ]; then
-      echo "backing up $filename"
-      cp -rf "$filename" "$BACKUP_DIR"
+  for f in "$HOME/.config/nvim" "$HOME/.vim" "$HOME/.vimrc"; do
+    if [ -e "$f" ] && [ ! -L "$f" ]; then
+      step "Backing up $f"
+      cp -rf "$f" "$backup_dir"
+      ok "$f"
     else
-      warning "$filename does not exist at this location or is a symlink"
+      skip "$f (symlink or missing)"
     fi
   done
+  section_end
 }
 
 cleanup_symlinks() {
-  title "Cleaning up symlinks"
+  title "Cleanup symlinks"
+  local config_files
+  config_files=$(find "$DOTFILES/config" -maxdepth 1 -mindepth 1 2>/dev/null)
 
-  echo -e
-  info "installing to $config_home"
-
-  config_files=$(find "$DOTFILES/config" -maxdepth 1 2>/dev/null)
   for config in $config_files; do
-    target="$config_home/$(basename "$config")"
+    local target="$config_home/$(basename "$config")"
     if [ -L "$target" ]; then
-      info "Cleaning up \"$target\""
+      step "Removing $target"
       rm "$target"
+      ok "Removed"
     elif [ -e "$target" ]; then
-      warning "Skipping \"$target\" because it is not a symlink"
+      warn "Not a symlink, skipping: $target"
     else
-      warning "Skipping \"$target\" because it does not exist"
+      skip "$target (does not exist)"
     fi
   done
+  section_end
 }
 
 setup_symlinks() {
-  title "Creating symlinks"
+  title "Symlinks → ~/.config"
+  mkdir -p "$config_home" "$data_home"
 
-  echo -e
-  info "installing to $config_home"
-  if [ ! -d "$config_home" ]; then
-    info "Creating $config_home"
-    mkdir -p "$config_home"
-  fi
+  local config_files
+  config_files=$(find "$DOTFILES/config" -maxdepth 1 -mindepth 1 2>/dev/null)
 
-  if [ ! -d "$data_home" ]; then
-    info "Creating $data_home"
-    mkdir -p "$data_home"
-  fi
-
-  config_files=$(find "$DOTFILES/config" -maxdepth 1 2>/dev/null)
   for config in $config_files; do
-    target="$config_home/$(basename "$config")"
+    local name target
+    name="$(basename "$config")"
+    target="$config_home/$name"
     if [ -e "$target" ]; then
-      info "~${target#"$HOME"} already exists... Skipping."
+      skip "~/.config/$name already exists"
     else
-      info "Creating symlink for $config"
       ln -s "$config" "$target"
+      ok "~/.config/$name"
     fi
   done
-
+  section_end
 }
 
 copy() {
-  if [ ! -d "$config_home" ]; then
-    info "Creating $config_home"
-    mkdir -p "$config_home"
-  fi
+  title "Copy configs"
+  mkdir -p "$config_home" "$data_home"
 
-  if [ ! -d "$data_home" ]; then
-    info "Creating $data_home"
-    mkdir -p "$data_home"
-  fi
-  config_files=$(find "$DOTFILES/config" -maxdepth 1 2>/dev/null)
+  local config_files
+  config_files=$(find "$DOTFILES/config" -maxdepth 1 -mindepth 1 2>/dev/null)
+
   for config in $config_files; do
-    target="$config_home/$(basename "$config")"
-    info "copying $config to $config_home/$config"
-    cp -R "$config" "$target"
+    local name="$(basename "$config")"
+    step "Copying $name"
+    cp -R "$config" "$config_home/$name"
+    ok "$name"
   done
+  section_end
 }
 
 setup_git() {
-  title "Setting up Git"
+  title "Git config"
 
-  defaultName=$(git config user.name)
-  defaultEmail=$(git config user.email)
-  defaultGithub=$(git config github.user)
+  local defaultName defaultEmail defaultGithub
+  defaultName=$(git config user.name 2>/dev/null || true)
+  defaultEmail=$(git config user.email 2>/dev/null || true)
+  defaultGithub=$(git config github.user 2>/dev/null || true)
 
-  read -rp "Name [$defaultName] " name
-  read -rp "Email [$defaultEmail] " email
-  read -rp "Github username [$defaultGithub] " github
+  read -rp "  Name        [${defaultName}]: " name
+  read -rp "  Email       [${defaultEmail}]: " email
+  read -rp "  GitHub user [${defaultGithub}]: " github
 
   git config -f ~/.gitconfig.local user.name "${name:-$defaultName}"
   git config -f ~/.gitconfig.local user.email "${email:-$defaultEmail}"
   git config -f ~/.gitconfig.local github.user "${github:-$defaultGithub}"
+  git config --global credential.helper "osxkeychain"
 
-  if [[ "$(uname)" == "Darwin" ]]; then
-    git config --global credential.helper "osxkeychain"
-  else
-    read -rn 1 -p "Save user and password to an unencrypted file to avoid writing? [y/N] " save
-    if [[ $save =~ ^([Yy])$ ]]; then
-      git config --global credential.helper "store"
-    else
-      git config --global credential.helper "cache --timeout 3600"
-    fi
-  fi
+  ok "~/.gitconfig.local written"
+  section_end
 }
 
 setup_homebrew() {
-  title "Setting up Homebrew"
+  title "Homebrew"
 
-  if test ! "$(command -v brew)"; then
-    info "Homebrew not installed. Installing."
+  if ! command -v brew &>/dev/null; then
+    step "Installing Homebrew..."
     curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash --login
-  fi
-
-  # install brew dependencies from Brewfile
-  brew bundle
-
-  # install fzf
-  echo -e
-  info "Installing fzf"
-  "$(brew --prefix)"/opt/fzf/install --key-bindings --completion --no-update-rc --no-bash --no-fish
-}
-
-setup_macos() {
-  title "Configuring macOS"
-  if [[ "$(uname)" == "Darwin" ]]; then
-
-    echo "Finder: show all filename extensions"
-    defaults write NSGlobalDomain AppleShowAllExtensions -bool true
-
-    echo "show hidden files by default"
-    defaults write com.apple.Finder AppleShowAllFiles -bool false
-
-    echo "expand save dialog by default"
-    defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
-
-    echo "show the ~/Library folder in Finder"
-    chflags nohidden ~/Library
-
-    echo "Enable full keyboard access for all controls (e.g. enable Tab in modal dialogs)"
-    defaults write NSGlobalDomain AppleKeyboardUIMode -int 3
-
-    echo "Enable subpixel font rendering on non-Apple LCDs"
-    defaults write NSGlobalDomain AppleFontSmoothing -int 2
-
-    echo "Use current directory as default search scope in Finder"
-    defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
-
-    echo "Show Path bar in Finder"
-    defaults write com.apple.finder ShowPathbar -bool true
-
-    echo "Show Status bar in Finder"
-    defaults write com.apple.finder ShowStatusBar -bool true
-
-    echo "Disable the autocapitalization of words"
-    defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool false
-
-    echo "Use yt music instead of iTunes"
-    defaults write digital.twisted.noTunes replacement https://music.youtube.com/
-
-    # echo "Disable press-and-hold for keys in favor of key repeat"
-    defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
-
-    echo "Set a fast keyboard repeat rate"
-    defaults write NSGlobalDomain KeyRepeat -int 2
-
-    echo "Set a shorter Delay until key repeat"
-    defaults write NSGlobalDomain InitialKeyRepeat -int 25
-
-    echo "Enable tap to click (Trackpad)"
-    defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
-
-    echo "Enable Safari’s debug menu"
-    defaults write com.apple.Safari IncludeInternalDebugMenu -bool true
-
-    echo "Save screenshots to the appropriate directory"
-    mkdir -p ~/Screenshots
-    defaults write com.apple.screencapture location ~/Screenshots
-
-    echo "Disable swipe in trackpad to show notification center"
-    defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadTwoFingerFromRightEdgeSwipeGesture -int 0
-
-    echo "Disable notes"
-    defaults write com.apple.dock wvous-br-corner -int 1
-    defaults write com.apple.dock wvous-br-modifier -int 0
-
-    echo "Fixing Home and End keys in macOS"
-    mkdir ~/Library/KeyBindings
-    cat <<EOF >>~/Library/KeyBindings/DefaultKeyBinding.dict
-{
-  "\UF729"  = moveToBeginningOfParagraph:; // home
-  "\UF72B"  = moveToEndOfParagraph:; // end
-  "$\UF729" = moveToBeginningOfParagraphAndModifySelection:; // shift-home
-  "$\UF72B" = moveToEndOfParagraphAndModifySelection:; // shift-end
-  "^\UF729" = moveToBeginningOfDocument:; // ctrl-home
-  "^\UF72B" = moveToEndOfDocument:; // ctrl-end
-  "^$\UF729" = moveToBeginningOfDocumentAndModifySelection:; // ctrl-shift-home
-  "^$\UF72B" = moveToEndOfDocumentAndModifySelection:; // ctrl-shift-end
-}
-EOF
-
-    echo "Kill affected applications"
-
-    info "Enable Hidden bar app"
-    sudo xattr -r -d com.apple.quarantine /Applications/Hidden\ Bar.app
-
-    for app in Safari Finder Dock Mail SystemUIServer; do killall "$app" >/dev/null 2>&1; done
+    ok "Homebrew installed"
   else
-    warning "macOS not detected. Skipping."
+    ok "Homebrew already installed"
   fi
+
+  step "Running brew bundle..."
+  brew bundle --file="$DOTFILES/Brewfile"
+  ok "Brewfile done"
+
+  step "Configuring fzf key bindings..."
+  "$(brew --prefix)"/opt/fzf/install --key-bindings --completion --no-update-rc --no-bash --no-fish
+  ok "fzf configured"
+  section_end
 }
 
-function setup_shell() {
-  title "Configuring shell"
+setup_shell() {
+  title "Shell → fish"
 
   local fish_path
   fish_path="$(brew --prefix)/bin/fish"
 
   if ! grep -qF "$fish_path" /etc/shells; then
-    info "adding $fish_path to /etc/shells"
-    echo "$fish_path" | sudo tee -a /etc/shells
+    step "Adding $fish_path to /etc/shells"
+    echo "$fish_path" | sudo tee -a /etc/shells >/dev/null
+    ok "Added to /etc/shells"
+  else
+    ok "$fish_path already in /etc/shells"
   fi
 
   if [[ "$SHELL" != "$fish_path" ]]; then
     chsh -s "$fish_path"
-    info "default shell changed to $fish_path"
+    ok "Default shell → $fish_path"
+  else
+    ok "fish is already the default shell"
   fi
+  section_end
 }
 
-case "$1" in
-backup)
-  backup
-  ;;
-clean)
-  cleanup_symlinks
-  ;;
-link)
-  setup_symlinks
-  ;;
-copy)
-  copy
-  ;;
-git)
-  setup_git
-  ;;
-homebrew)
-  setup_homebrew
-  ;;
-shell)
-  setup_shell
-  ;;
-macos)
-  setup_macos
-  ;;
-all)
-  setup_symlinks
-  setup_homebrew
-  setup_shell
-  setup_git
-  setup_macos
-  ;;
-*)
-  echo -e $"\nUsage: $(basename "$0") {backup|link|git|homebrew|shell|macos|all}\n"
-  exit 1
-  ;;
+setup_macos() {
+  title "macOS defaults"
+
+  if [[ "$(uname)" != "Darwin" ]]; then
+    warn "Not macOS, skipping."
+    section_end
+    return
+  fi
+
+  local settings=(
+    "Finder: show all extensions|defaults write NSGlobalDomain AppleShowAllExtensions -bool true"
+    "Expand save dialog|defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true"
+    "Show ~/Library in Finder|chflags nohidden ~/Library"
+    "Full keyboard access in dialogs|defaults write NSGlobalDomain AppleKeyboardUIMode -int 3"
+    "Finder: search current dir|defaults write com.apple.finder FXDefaultSearchScope -string SCcf"
+    "Finder: show path bar|defaults write com.apple.finder ShowPathbar -bool true"
+    "Finder: show status bar|defaults write com.apple.finder ShowStatusBar -bool true"
+    "Disable autocapitalization|defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool false"
+    "Disable press-and-hold|defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false"
+    "Fast key repeat|defaults write NSGlobalDomain KeyRepeat -int 2"
+    "Short key repeat delay|defaults write NSGlobalDomain InitialKeyRepeat -int 25"
+    "Trackpad tap to click|defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true"
+    "Disable notification center swipe|defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadTwoFingerFromRightEdgeSwipeGesture -int 0"
+    "Screenshots → ~/Screenshots|mkdir -p ~/Screenshots && defaults write com.apple.screencapture location ~/Screenshots"
+    "noTunes → YouTube Music|defaults write digital.twisted.noTunes replacement https://music.youtube.com/"
+    "Disable dock hot corner (BR)|defaults write com.apple.dock wvous-br-corner -int 1 && defaults write com.apple.dock wvous-br-modifier -int 0"
+  )
+
+  for entry in "${settings[@]}"; do
+    local label="${entry%%|*}"
+    local cmd="${entry##*|}"
+    step "$label"
+    eval "$cmd"
+    ok "$label"
+  done
+
+  # Home/End key bindings
+  step "Fix Home/End keys"
+  mkdir -p ~/Library/KeyBindings
+  cat >~/Library/KeyBindings/DefaultKeyBinding.dict <<'EOF'
+{
+  "\UF729"   = moveToBeginningOfParagraph:;
+  "\UF72B"   = moveToEndOfParagraph:;
+  "$\UF729"  = moveToBeginningOfParagraphAndModifySelection:;
+  "$\UF72B"  = moveToEndOfParagraphAndModifySelection:;
+  "^\UF729"  = moveToBeginningOfDocument:;
+  "^\UF72B"  = moveToEndOfDocument:;
+  "^$\UF729" = moveToBeginningOfDocumentAndModifySelection:;
+  "^$\UF72B" = moveToEndOfDocumentAndModifySelection:;
+}
+EOF
+  ok "Home/End keys fixed"
+
+  step "Removing quarantine from Hidden Bar"
+  sudo xattr -r -d com.apple.quarantine /Applications/Hidden\ Bar.app 2>/dev/null && ok "Hidden Bar" || skip "Hidden Bar not found"
+
+  step "Restarting affected apps..."
+  for app in Safari Finder Dock SystemUIServer; do killall "$app" &>/dev/null || true; done
+  ok "Done"
+  section_end
+}
+
+# ─── Main ─────────────────────────────────────────────────────────────────────
+header
+
+case "${1:-}" in
+  backup)   backup ;;
+  clean)    cleanup_symlinks ;;
+  link)     setup_symlinks ;;
+  copy)     copy ;;
+  git)      setup_git ;;
+  homebrew) setup_homebrew ;;
+  shell)    setup_shell ;;
+  macos)    setup_macos ;;
+  all)
+    setup_symlinks
+    setup_homebrew
+    setup_shell
+    setup_git
+    setup_macos
+    ;;
+  *)
+    echo -e "${C_GRAY}"
+    echo -e "  Usage: $(basename "$0") <command>"
+    echo -e ""
+    echo -e "  Commands:"
+    echo -e "    ${C_CYAN}link${C_GRAY}      Symlink config/ → ~/.config"
+    echo -e "    ${C_CYAN}copy${C_GRAY}      Copy config/ → ~/.config"
+    echo -e "    ${C_CYAN}clean${C_GRAY}     Remove config symlinks"
+    echo -e "    ${C_CYAN}backup${C_GRAY}    Backup existing configs"
+    echo -e "    ${C_CYAN}git${C_GRAY}       Configure git identity"
+    echo -e "    ${C_CYAN}homebrew${C_GRAY}  Install Homebrew + Brewfile"
+    echo -e "    ${C_CYAN}shell${C_GRAY}     Set fish as default shell"
+    echo -e "    ${C_CYAN}macos${C_GRAY}     Apply macOS defaults"
+    echo -e "    ${C_CYAN}all${C_GRAY}       Run link + homebrew + shell + git + macos"
+    echo -e "${R}"
+    exit 1
+    ;;
 esac
 
-echo -e
-success "Done."
+done_msg
