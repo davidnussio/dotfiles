@@ -9,15 +9,6 @@ COLOR_PURPLE="\033[1;35m"
 COLOR_YELLOW="\033[1;33m"
 COLOR_NONE="\033[0m"
 
-linkables=(
-  # "zsh/.zshrc"
-  # "zsh/.zshenv"
-  # "zsh/.zprofile"
-  # "zsh/.zsh_aliases"
-  # "zsh/.zsh_functions"
-  # "zsh/.zsh_prompt"
-)
-
 # Configuration home
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
@@ -50,17 +41,6 @@ backup() {
   echo "Creating backup directory at $BACKUP_DIR"
   mkdir -p "$BACKUP_DIR"
 
-  for file in "${linkables[@]}"; do
-    filename="$(basename "$file")"
-    target="$HOME/$filename"
-    if [ -f "$target" ]; then
-      echo "backing up $filename"
-      cp "$target" "$BACKUP_DIR"
-    else
-      warning "$filename does not exist at this location or is a symlink"
-    fi
-  done
-
   for filename in "$HOME/.config/nvim" "$HOME/.vim" "$HOME/.vimrc"; do
     if [ ! -L "$filename" ]; then
       echo "backing up $filename"
@@ -73,17 +53,6 @@ backup() {
 
 cleanup_symlinks() {
   title "Cleaning up symlinks"
-  for file in "${linkables[@]}"; do
-    target="$HOME/$(basename "$file")"
-    if [ -L "$target" ]; then
-      info "Cleaning up \"$target\""
-      rm "$target"
-    elif [ -e "$target" ]; then
-      warning "Skipping \"$target\" because it is not a symlink"
-    else
-      warning "Skipping \"$target\" because it does not exist"
-    fi
-  done
 
   echo -e
   info "installing to $config_home"
@@ -104,16 +73,6 @@ cleanup_symlinks() {
 
 setup_symlinks() {
   title "Creating symlinks"
-
-  for file in "${linkables[@]}"; do
-    target="$HOME/$(basename "$file")"
-    if [ -e "$target" ]; then
-      info "~${target#"$HOME"} already exists... Skipping."
-    else
-      info "Creating symlink for $file"
-      ln -s "$DOTFILES/$file" "$target"
-    fi
-  done
 
   echo -e
   info "installing to $config_home"
@@ -138,13 +97,6 @@ setup_symlinks() {
     fi
   done
 
-  # symlink .zshenv into home directory to properly setup ZSH
-  if [ ! -e "$HOME/.zshenv" ]; then
-    info "Creating symlink for .zshenv"
-    ln -s "$DOTFILES/config/zsh/.zshenv" "$HOME/.zshenv"
-  else
-    info "~/.zshenv already exists... Skipping."
-  fi
 }
 
 copy() {
@@ -197,13 +149,7 @@ setup_homebrew() {
 
   if test ! "$(command -v brew)"; then
     info "Homebrew not installed. Installing."
-    # Run as a login shell (non-interactive) so that the script doesn't pause for user input
     curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash --login
-  fi
-
-  if [ "$(uname)" == "Linux" ]; then
-    test -d ~/.linuxbrew && eval "$(~/.linuxbrew/bin/brew shellenv)"
-    test -d /home/linuxbrew/.linuxbrew && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
   fi
 
   # install brew dependencies from Brewfile
@@ -213,16 +159,6 @@ setup_homebrew() {
   echo -e
   info "Installing fzf"
   "$(brew --prefix)"/opt/fzf/install --key-bindings --completion --no-update-rc --no-bash --no-fish
-}
-
-function setup_terminfo() {
-  title "Configuring terminfo"
-
-  info "adding tmux.terminfo"
-  tic -x "$DOTFILES/resources/tmux.terminfo"
-
-  info "adding xterm-256color-italic.terminfo"
-  tic -x "$DOTFILES/resources/xterm-256color-italic.terminfo"
 }
 
 setup_macos() {
@@ -317,21 +253,18 @@ EOF
 function setup_shell() {
   title "Configuring shell"
 
-  [[ -n "$(command -v brew)" ]] && sh_path="$(brew --prefix)/bin/fish" || sh_path="$(which fish)"
+  local fish_path
+  fish_path="$(brew --prefix)/bin/fish"
 
-  if ! grep -q "/opt/homebrew/bin/fish" /etc/shells; then
-    info "adding $sh_path to /etc/shells"
-    echo "/opt/homebrew/bin/fish" | sudo tee -a /etc/shells
+  if ! grep -qF "$fish_path" /etc/shells; then
+    info "adding $fish_path to /etc/shells"
+    echo "$fish_path" | sudo tee -a /etc/shells
   fi
 
-  if [[ "$SHELL" != "/usr/local/bin/fish" ]]; then
-    chsh -s /usr/local/bin/fish
-    info "default shell changed to $sh_path"
+  if [[ "$SHELL" != "$fish_path" ]]; then
+    chsh -s "$fish_path"
+    info "default shell changed to $fish_path"
   fi
-
-  chsh -s $(which fish)
-
-  fish -c "fisher install jorgebucaran/fisher jethrokuan/z jethrokuan/fzf jorgebucaran/autopair.fish"
 }
 
 case "$1" in
@@ -356,22 +289,18 @@ homebrew)
 shell)
   setup_shell
   ;;
-terminfo)
-  setup_terminfo
-  ;;
 macos)
   setup_macos
   ;;
 all)
   setup_symlinks
-  setup_terminfo
   setup_homebrew
   setup_shell
   setup_git
   setup_macos
   ;;
 *)
-  echo -e $"\nUsage: $(basename "$0") {backup|link|git|homebrew|shell|terminfo|macos|all}\n"
+  echo -e $"\nUsage: $(basename "$0") {backup|link|git|homebrew|shell|macos|all}\n"
   exit 1
   ;;
 esac
