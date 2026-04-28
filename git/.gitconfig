@@ -5,6 +5,7 @@
   path = ~/.gitconfig.eoc
 [core]
   autocrlf = input
+  pager = delta
 [color]
   ui = auto
 [push]
@@ -33,6 +34,10 @@
   hide = "!git update-index --assume-unchanged"
   unhide = "!git update-index --no-assume-unchanged"
   hidden  = "!git ls-files -v | grep ^[hsS] | cut -c 3-"
+  last = diff HEAD~1 HEAD --name-only
+  undo = reset HEAD~1 --mixed
+  current = rev-parse --abbrev-ref HEAD
+  save = stash push -m
 [gui]
   editor = code
 [help]

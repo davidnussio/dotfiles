@@ -2,6 +2,8 @@
 java = "25"
 bun = "latest"
 node = "24"
+python = "3.12"
+uv = "latest"
 
 [settings]
 verbose = false

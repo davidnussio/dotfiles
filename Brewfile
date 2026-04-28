@@ -101,3 +101,35 @@ cask "claude-code"
 cask "claude"
 cask "yaak"
 
+# HTTP / API testing
+brew "xh"           # httpie più veloce, scritto in Rust
+brew "hurl"         # test HTTP dichiarativi
+
+# JSON / data
+brew "gron"         # rende JSON greppabile
+brew "fx"           # JSON viewer interattivo
+brew "miller"       # CSV/JSON/TSV processing
+
+# Git
+brew "git-delta"    # diff viewer moderno
+brew "lazygit"      # TUI git
+
+# Kubernetes / infra
+brew "k9s"          # TUI per kubectl
+brew "helm"         # package manager Kubernetes
+brew "stern"        # tail logs da più pod
+brew "kubectx"      # switch context/namespace
+
+# Dev utilities
+brew "mkcert"       # certificati HTTPS locali
+brew "oha"          # load testing HTTP
+brew "hyperfine"    # benchmarking comandi shell
+brew "viddy"        # watch moderno con diff
+
+# Sicurezza
+brew "trufflehog"   # scan segreti in git history
+brew "trivy"        # vulnerability scanner container/filesystem
+
+# Monitoring
+brew "bandwhich"    # monitor traffico di rete per processo
+
