@@ -21,7 +21,7 @@ if OS.mac?
   cask "mongodb-compass" # MongoDB GUI
   # cask "appflowy" #
   # cask "notion" # Note-taking app
-  cask "hiddenbar" # Menu bar manager
+  cask "jordanbaird-ice"
   cask "discord" # Chat app
   cask "omnissa-horizon-client" # VDI client
   cask "notunes" # Prevent iTunes from opening
