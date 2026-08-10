@@ -13,7 +13,3 @@ theme = "Ayu Mirage"
 
 cursor-style = block
 cursor-style-blink = true
-
-shell-integration = fish
-
-

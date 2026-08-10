@@ -1,0 +1,41 @@
+// Zellij tuned for Ghostty, Neovim, and OpenCode.
+theme "ayu_mirage"
+default_layout "compact"
+default_shell "fish"
+
+pane_frames true
+mouse_mode true
+copy_on_select true
+copy_clipboard "system"
+scroll_buffer_size 10000
+simplified_ui false
+styled_underlines true
+show_startup_tips false
+show_release_notes false
+session_serialization true
+pane_viewport_serialization true
+scrollback_lines_to_serialize 100
+serialization_interval 60
+stacked_resize true
+
+ui {
+    pane_frames {
+        rounded_corners true
+        hide_session_name false
+    }
+}
+
+// Alt navigation stays out of Neovim's Ctrl-h/j/k/l path.
+keybinds {
+    normal {
+        bind "Alt h" "Alt Left" { MoveFocusOrTab "Left"; }
+        bind "Alt l" "Alt Right" { MoveFocusOrTab "Right"; }
+        bind "Alt j" "Alt Down" { MoveFocus "Down"; }
+        bind "Alt k" "Alt Up" { MoveFocus "Up"; }
+        bind "Alt n" { NewPane; }
+        bind "Alt f" { ToggleFocusFullscreen; }
+        bind "Alt t" { NewTab; }
+        bind "Alt [" { GoToPreviousTab; }
+        bind "Alt ]" { GoToNextTab; }
+    }
+}

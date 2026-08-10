@@ -37,6 +37,7 @@ dotfiles/
 ├── config/
 │   ├── fish/                   # Fish shell — config, functions, completions
 │   ├── nvim/                   # Neovim config (lazy.nvim)
+│   ├── zellij/                 # Multiplexer config + development layout
 │   ├── starship.toml           # Starship prompt
 │   ├── mise/                   # mise-en-place runtime manager
 │   └── topgrade.toml           # Topgrade updater config
@@ -53,7 +54,7 @@ dotfiles/
 | Shell | [Fish](https://fishshell.com) + [Starship](https://starship.rs) |
 | Terminal | [Ghostty](https://ghostty.org) |
 | Editor | [Neovim](https://neovim.io) (lazy.nvim) + VSCode |
-| Multiplexer | [tmux](https://github.com/tmux/tmux) |
+| Multiplexer | [Zellij](https://zellij.dev) |
 | Package manager | [Homebrew](https://brew.sh) |
 | Runtime manager | [mise](https://mise.jdx.dev) |
 | File navigation | [yazi](https://github.com/sxyazi/yazi) + [zoxide](https://github.com/ajeetdsouza/zoxide) + [fzf](https://github.com/junegunn/fzf) |

@@ -71,7 +71,7 @@ brew "fd" # Find alternative
 brew "ripgrep" # Grep alternative
 brew "jq" # JSON processor
 brew "fzf" # Fuzzy finder
-brew "tmux" # Terminal multiplexer
+brew "zellij" # Terminal multiplexer
 brew "golang" # Go programming language
 brew "docker" # Container runtime
 brew "vsce" # Visual Studio Code
@@ -97,7 +97,7 @@ brew "gemini-cli" # Gemini CLI
 brew "biome"
 brew "btop"
 # brew "backlog-md"
-cask "claude-code"
+cask "claude-code@latest"
 cask "claude"
 cask "yaak"
 
@@ -132,4 +132,3 @@ brew "trivy"        # vulnerability scanner container/filesystem
 
 # Monitoring
 brew "bandwhich"    # monitor traffico di rete per processo
-

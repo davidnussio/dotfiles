@@ -6,30 +6,24 @@
 [core]
   autocrlf = input
   pager = delta
+  excludesfile = ~/.gitignore_global
+  editor = nvim
+	ignorecase = false
 [color]
   ui = auto
-[push]
-  default = simple
-[merge]
-  tool = vimdiff
 [difftool]
   trustExitCode = true
 [commit]
   verbose = true
 	gpgsign = true
-[core]
-  excludesfile = /home/david/.gitignore
-  editor = nvim
-	ignorecase = false
 [merge]
-  tool = meld
+  tool = vimdiff
 [push]
   default = current
 [alias]
   lg1 = log --graph --abbrev-commit --decorate --date=relative --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
   lg2 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)' --all
   lg = !"git lg1"
-  dsf = "!f() { [ -z \"$GIT_PREFIX\" ] || cd \"$GIT_PREFIX\" && git diff --color \"$@\" | diff-so-fancy  | less --tabs=4 -RFX; }; f"
   ignore = "!gi() { curl -L -s https://www.gitignore.io/api/$@ ;}; gi"
   hide = "!git update-index --assume-unchanged"
   unhide = "!git update-index --no-assume-unchanged"

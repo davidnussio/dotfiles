@@ -34,6 +34,8 @@
 | `e` | `envsec` | Manage env secrets |
 | `tw` | `timew` | Timewarrior time tracking |
 | `playground` | `cd ~/Developer/playground && code .` | Jump to playground |
+| `zdev` | `zellij --layout dev` | Open the development workspace |
+| `za <name>` | `zellij attach --create <name>` | Attach to or create a session |
 
 ### File System
 
@@ -48,7 +50,7 @@
 | `cat` | `bat --plain` | Syntax-highlighted cat |
 | `catl` | `bat` | Cat with line numbers |
 | `ff` | `fzf --preview 'bat ...'` | Fuzzy find with preview |
-| `fd` | `fdfind` | Fast file finder |
+| `fd` | `fd` | Fast file finder |
 | `lst` | `tree -a -I "node_modules\|.git\|..."` | Tree, ignoring noise |
 | `agi` | `ag --ignore node_modules ...` | Silver searcher, no noise |
 
@@ -67,7 +69,6 @@
 | `gcm` | `git checkout master` | Checkout master |
 | `gbb` | `git checkout -` | Previous branch |
 | `gpu` | `git push` | Push |
-| `gpl` | `git stash -u && git pull --rebase && git stash pop` | Safe pull with stash |
 | `git-clean-branches` | `git fetch --prune && git gc` | Prune dead branches |
 
 ---
@@ -90,6 +91,19 @@
 ---
 
 ## 🛠 CLI Tools Reference
+
+### Zellij
+
+Start the workspace with `zdev`. It opens dedicated tabs for Neovim, OpenCode,
+runtime shells, and lazygit using the compact Ayu Mirage interface.
+
+| Keybinding | Action |
+| :--- | :--- |
+| `Alt+H/J/K/L` | Move between panes or adjacent tabs |
+| `Alt+N` | Create a pane |
+| `Alt+T` | Create a tab |
+| `Alt+F` | Toggle pane fullscreen |
+| `Alt+[` / `Alt+]` | Previous / next tab |
 
 ### Navigation & Files
 

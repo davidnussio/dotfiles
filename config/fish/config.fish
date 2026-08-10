@@ -20,9 +20,16 @@ if status is-interactive
 
   zoxide init fish | source
 
+  # Default editors for Git, OpenCode, and other CLI tools
+  set -gx EDITOR nvim
+  set -gx VISUAL nvim
+  set -gx GIT_EDITOR nvim
+
  # Abbreviations
   abbr -a fsource source ~/.config/fish/config.fish
   abbr -a o open
+  abbr -a zdev 'zellij --layout dev'
+  abbr -a za 'zellij attach --create'
   abbr -a tw timew
   abbr -a e envsec
 
@@ -34,8 +41,6 @@ if status is-interactive
 
   # abbr -a npm-audit npm audit --registry https://registry.npmjs.org --omit dev
   abbr -a npm-audit-all npm audit --registry https://registry.npmjs.org
-
-  alias icat "kitty +kitten icat"
 
   alias reload "exec $SHELL -l"
 
@@ -53,17 +58,11 @@ if status is-interactive
   alias lla='ll -a'
   alias lt='eza --tree --level=2 --long --icons --git'
   alias lta='lt -a'
-  alias ff="fzf --preview 'batcat --style=numbers --color=always {}'"
-  alias fd="fdfind"
+  alias ff="fzf --preview 'bat --style=numbers --color=always {}'"
   alias cat="bat --plain"
   alias catl="bat"
 
   alias getpick="npx -y gitpick@latest"
-
-  # Git
-  abbr -a gpl 'git stash -u && git pull --rebase && git stash pop'
-
-
 
   # # Speed up ... -> ../.
   function expand-dot-to-parent-directory-path -d 'expand ... to ../.. etc'
@@ -90,16 +89,6 @@ if status is-interactive
   test -e ~/.config/fish/config-local.fish
   and . ~/.config/fish/config-local.fish
 end
-
-# bit
-if not string match -q -- "/home/david/bin" $PATH
-  set -gx PATH $PATH "/home/david/bin"
-end
-# bit end
-
-# if status is-interactive
-#     eval (zellij setup --generate-auto-start fish | string collect)
-# end
 
 # Added by LM Studio CLI (lms)
 set -gx PATH $PATH /Users/david/.lmstudio/bin
