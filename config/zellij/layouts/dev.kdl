@@ -6,12 +6,12 @@ layout {
         }
     }
 
-    tab name="editor" focus=true {
-        pane command="nvim"
-    }
-
     tab name="ai" {
         pane command="opencode"
+    }
+
+    tab name="editor" focus=true {
+        pane command="nvim"
     }
 
     tab name="run" split_direction="vertical" {

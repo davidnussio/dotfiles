@@ -34,7 +34,7 @@
 | `e` | `envsec` | Manage env secrets |
 | `tw` | `timew` | Timewarrior time tracking |
 | `playground` | `cd ~/Developer/playground && code .` | Jump to playground |
-| `zdev` | `zellij --layout dev` | Open the development workspace |
+| `zdev` | Project layout or default Zellij | Open a workspace in the current directory |
 | `za <name>` | `zellij attach --create <name>` | Attach to or create a session |
 
 ### File System

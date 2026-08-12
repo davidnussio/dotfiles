@@ -28,7 +28,15 @@ if status is-interactive
  # Abbreviations
   abbr -a fsource source ~/.config/fish/config.fish
   abbr -a o open
-  abbr -a zdev 'zellij --layout dev'
+  function zdev
+    if test -f .zellij/dev.kdl
+      zellij --layout .zellij/dev.kdl --cwd $PWD
+    else
+      zellij --cwd $PWD
+    end
+  end
+
+  abbr -a zterm 'zellij --layout term'
   abbr -a za 'zellij attach --create'
   abbr -a tw timew
   abbr -a e envsec

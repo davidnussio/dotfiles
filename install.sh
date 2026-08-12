@@ -92,6 +92,9 @@ cleanup_symlinks() {
   config_files=$(find "$DOTFILES/config" -maxdepth 1 -mindepth 1 2>/dev/null)
 
   for config in $config_files; do
+    if [ "$(basename "$config")" = "opencode" ]; then
+      continue
+    fi
     local target="$config_home/$(basename "$config")"
     if [ -L "$target" ]; then
       step "Removing $target"
@@ -103,7 +106,63 @@ cleanup_symlinks() {
       skip "$target (does not exist)"
     fi
   done
+
+  local opencode_source="$DOTFILES/config/opencode"
+  local opencode_target="$config_home/opencode"
+  local opencode_entry
+  for opencode_entry in AGENTS.md opencode.json agents commands tools; do
+    local managed_target="$opencode_target/$opencode_entry"
+    if [ -L "$managed_target" ] && [ "$(readlink "$managed_target")" = "$opencode_source/$opencode_entry" ]; then
+      step "Removing $managed_target"
+      rm "$managed_target"
+      ok "Removed"
+    fi
+  done
+  if [ -d "$opencode_source/skills" ]; then
+    local skill
+    for skill in "$opencode_source"/skills/*; do
+      local skill_target="$opencode_target/skills/$(basename "$skill")"
+      if [ -L "$skill_target" ] && [ "$(readlink "$skill_target")" = "$skill" ]; then
+        step "Removing $skill_target"
+        rm "$skill_target"
+        ok "Removed"
+      fi
+    done
+  fi
   section_end
+}
+
+setup_opencode_symlinks() {
+  local source="$DOTFILES/config/opencode"
+  local target="$config_home/opencode"
+  mkdir -p "$target" "$target/skills"
+
+  local entry
+  for entry in AGENTS.md opencode.json agents commands tools; do
+    local managed_source="$source/$entry"
+    local managed_target="$target/$entry"
+    if [ -L "$managed_target" ] && [ "$(readlink "$managed_target")" = "$managed_source" ]; then
+      ok "~/.config/opencode/$entry"
+    elif [ -e "$managed_target" ] || [ -L "$managed_target" ]; then
+      warn "Not replacing existing OpenCode path: $managed_target"
+    else
+      ln -s "$managed_source" "$managed_target"
+      ok "~/.config/opencode/$entry"
+    fi
+  done
+
+  local skill
+  for skill in "$source"/skills/*; do
+    local skill_target="$target/skills/$(basename "$skill")"
+    if [ -L "$skill_target" ] && [ "$(readlink "$skill_target")" = "$skill" ]; then
+      ok "~/.config/opencode/skills/$(basename "$skill")"
+    elif [ -e "$skill_target" ] || [ -L "$skill_target" ]; then
+      warn "Not replacing existing OpenCode skill: $skill_target"
+    else
+      ln -s "$skill" "$skill_target"
+      ok "~/.config/opencode/skills/$(basename "$skill")"
+    fi
+  done
 }
 
 setup_symlinks() {
@@ -116,6 +175,9 @@ setup_symlinks() {
   for config in $config_files; do
     local name target
     name="$(basename "$config")"
+    if [ "$name" = "opencode" ]; then
+      continue
+    fi
     target="$config_home/$name"
     if [ -e "$target" ]; then
       skip "~/.config/$name already exists"
@@ -124,6 +186,7 @@ setup_symlinks() {
       ok "~/.config/$name"
     fi
   done
+  setup_opencode_symlinks
   section_end
 }
 
@@ -136,10 +199,17 @@ copy() {
 
   for config in $config_files; do
     local name="$(basename "$config")"
+    if [ "$name" = "opencode" ]; then
+      continue
+    fi
     step "Copying $name"
     cp -R "$config" "$config_home/$name"
     ok "$name"
   done
+  step "Copying managed OpenCode config"
+  mkdir -p "$config_home/opencode"
+  cp -R "$DOTFILES/config/opencode/." "$config_home/opencode/"
+  ok "opencode"
   section_end
 }
 

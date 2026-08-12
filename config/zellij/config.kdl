@@ -1,5 +1,5 @@
 // Zellij tuned for Ghostty, Neovim, and OpenCode.
-theme "ayu_mirage"
+theme "nord"
 default_layout "compact"
 default_shell "fish"
 
