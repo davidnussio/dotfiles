@@ -28,11 +28,12 @@ if status is-interactive
  # Abbreviations
   abbr -a fsource source ~/.config/fish/config.fish
   abbr -a o open
+
   function zdev
     if test -f .zellij/dev.kdl
-      zellij --layout .zellij/dev.kdl --cwd $PWD
+      zellij --layout .zellij/dev.kdl
     else
-      zellij --cwd $PWD
+      zellij --layout dev
     end
   end
 
