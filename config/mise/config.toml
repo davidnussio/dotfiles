@@ -1,8 +1,8 @@
 [tools]
-java = "25"
+java = "26"
 bun = "latest"
-node = "24"
-python = "3.12"
+node = "26"
+python = "3.14"
 uv = "latest"
 
 [settings]
