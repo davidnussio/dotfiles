@@ -73,6 +73,7 @@ if status is-interactive
   alias catl="bat"
 
   alias getpick="npx -y gitpick@latest"
+  alias y=yazi
 
   function my_key_bindings
     fish_default_key_bindings

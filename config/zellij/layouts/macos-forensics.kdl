@@ -1,0 +1,57 @@
+layout {
+    default_tab_template {
+        children
+        pane size=1 borderless=true {
+            plugin location="zellij:compact-bar"
+        }
+    }
+
+    tab name="overview" focus=true {
+        pane command="btop"
+    }
+
+    tab name="processes" split_direction="vertical" {
+        pane name="procs" command="procs"
+        pane name="lsof" split_direction="horizontal" {
+            pane command="watch" {
+                args "-n" "2" "lsof"
+            }
+            pane name="shell"
+        }
+    }
+
+    tab name="network" split_direction="vertical" {
+        pane command="nettop"
+        pane command="watch" {
+            args "-n" "2" "lsof -nP -iTCP"
+        }
+    }
+
+    tab name="filesystem" split_direction="vertical" {
+        pane command="sudo" {
+            args "fs_usage" "-w" "-f" "filesystem"
+        }
+        pane command="watch" {
+            args "-n" "2" "df -h"
+        }
+    }
+
+    tab name="memory" split_direction="vertical" {
+        pane command="vm_stat" {
+            args "2"
+        }
+        pane command="watch" {
+            args "-n" "2" "memory_pressure"
+        }
+    }
+
+    tab name="logs" {
+        pane command="log" {
+            args "stream" "--style" "compact"
+        }
+    }
+
+    tab name="investigate" {
+        pane name="shell"
+    }
+}
