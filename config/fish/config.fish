@@ -12,13 +12,33 @@ if status is-interactive
   bind \e\[1\;3A prevd
   bind \e\[1\;4C nextd
 
-  # Add brew path
-  /opt/homebrew/bin/brew shellenv | source
+  # Add Homebrew to PATH on Apple Silicon and Intel Macs.
+  if test -x /opt/homebrew/bin/brew
+    /opt/homebrew/bin/brew shellenv | source
+  else if test -x /usr/local/bin/brew
+    /usr/local/bin/brew shellenv | source
+  end
 
   # Commands to run in interactive sessions can go here
-  starship init fish | source
+  if type -q starship
+    starship init fish | source
+  end
 
-  zoxide init fish | source
+  if type -q zoxide
+    zoxide init fish | source
+  end
+
+  if type -q mise
+    mise activate fish | source
+  end
+
+  if type -q atuin
+    atuin init fish | source
+  end
+
+  if type -q direnv
+    direnv hook fish | source
+  end
 
   # Default editors for Git, OpenCode, and other CLI tools
   set -gx EDITOR nvim
@@ -40,7 +60,6 @@ if status is-interactive
   abbr -a zterm 'zellij --layout term'
   abbr -a zforensics 'zellij --layout macos-forensics'
   abbr -a za 'zellij attach --create'
-  abbr -a tw timew
   abbr -a e envsec
 
   abbr -a vi nvim
@@ -57,8 +76,8 @@ if status is-interactive
   alias playground "cd ~/Developer/playground && code ."
 
   # Aliases
-  alias agi='ag --ignore node_modules --ignore dist --ignore coverage --ignore test --ignore tests --ignore __test__ --ignore __mocks__'
-  alias lst='tree -a -I "node_modules|.git|.next|dist|__generated__"'
+  alias rgi='rg --hidden --glob "!node_modules" --glob "!dist" --glob "!coverage" --glob "!.git"'
+  alias lst='eza --tree --level=3 --all --git-ignore --group-directories-first --icons'
   alias git-clean-branches='git fetch --prune && git gc'
 
   # File system
@@ -87,20 +106,18 @@ if status is-interactive
 end
 
 # Added by LM Studio CLI (lms)
-set -gx PATH $PATH /Users/david/.lmstudio/bin
+fish_add_path --global --append "$HOME/.lmstudio/bin"
 
 # Added GPG TTY variable
 set -gx GPG_TTY (tty)
 
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
-if test -f /opt/homebrew/Caskroom/miniconda/base/bin/conda
-    eval /opt/homebrew/Caskroom/miniconda/base/bin/conda "shell.fish" "hook" $argv | source
-else
-    if test -f "/opt/homebrew/Caskroom/miniconda/base/etc/fish/conf.d/conda.fish"
-        . "/opt/homebrew/Caskroom/miniconda/base/etc/fish/conf.d/conda.fish"
-    else
-        set -x PATH "/opt/homebrew/Caskroom/miniconda/base/bin" $PATH
+if type -q brew
+    set -l brew_prefix (brew --prefix)
+    set -l conda_root "$brew_prefix/Caskroom/miniconda/base"
+    if test -x "$conda_root/bin/conda"
+        eval "$conda_root/bin/conda" "shell.fish" "hook" $argv | source
     end
 end
 # <<< conda initialize <<<
@@ -111,8 +128,6 @@ end
 # Added by OrbStack: command-line tools and integration
 # This won't be added again if you remove it.
 source ~/.orbstack/shell/init2.fish 2>/dev/null || :
-
-# source /nix/var/nix/profiles/default/etc/profile.d/nix.fish
 
 # Override: Tab su z mostra il DB zoxide come lista di candidati
 function __zoxide_z_complete

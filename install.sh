@@ -70,20 +70,69 @@ done_msg() {
 # ─── Commands ─────────────────────────────────────────────────────────────────
 backup() {
   title "Backup"
-  local backup_dir="$HOME/dotfiles-backup"
+  local backup_dir="$HOME/dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
   step "Creating backup dir at $backup_dir"
-  mkdir -p "$backup_dir"
+  mkdir -p "$backup_dir/config" "$backup_dir/git" "$backup_dir/ghostty"
 
-  for f in "$HOME/.config/nvim" "$HOME/.vim" "$HOME/.vimrc"; do
+  for f in "$config_home/nvim" "$config_home/fish" "$config_home/zellij" \
+    "$config_home/starship.toml" "$config_home/mise" "$config_home/topgrade.toml"; do
     if [ -e "$f" ] && [ ! -L "$f" ]; then
       step "Backing up $f"
-      cp -rf "$f" "$backup_dir"
+      cp -R "$f" "$backup_dir/config/$(basename "$f")"
       ok "$f"
     else
       skip "$f (symlink or missing)"
     fi
   done
+
+  for f in "$HOME/.gitconfig" "$HOME/.gitignore_global"; do
+    if [ -e "$f" ] && [ ! -L "$f" ]; then
+      cp "$f" "$backup_dir/git/$(basename "$f")"
+      ok "$f"
+    else
+      skip "$f (symlink or missing)"
+    fi
+  done
+
+  local ghostty_config="$HOME/Library/Application Support/com.mitchellh.ghostty/config"
+  if [ -e "$ghostty_config" ] && [ ! -L "$ghostty_config" ]; then
+    cp "$ghostty_config" "$backup_dir/ghostty/config"
+    ok "$ghostty_config"
+  else
+    skip "$ghostty_config (symlink or missing)"
+  fi
   section_end
+}
+
+link_managed() {
+  local source="$1"
+  local target="$2"
+  local label="$3"
+
+  mkdir -p "$(dirname "$target")"
+  if [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
+    ok "$label"
+  elif [ -e "$target" ] || [ -L "$target" ]; then
+    warn "Not replacing existing path: $target"
+  else
+    ln -s "$source" "$target"
+    ok "$label"
+  fi
+}
+
+unlink_managed() {
+  local source="$1"
+  local target="$2"
+
+  if [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
+    step "Removing $target"
+    rm "$target"
+    ok "Removed"
+  elif [ -e "$target" ] || [ -L "$target" ]; then
+    warn "Not managed by this repository, skipping: $target"
+  else
+    skip "$target (does not exist)"
+  fi
 }
 
 cleanup_symlinks() {
@@ -96,73 +145,14 @@ cleanup_symlinks() {
       continue
     fi
     local target="$config_home/$(basename "$config")"
-    if [ -L "$target" ]; then
-      step "Removing $target"
-      rm "$target"
-      ok "Removed"
-    elif [ -e "$target" ]; then
-      warn "Not a symlink, skipping: $target"
-    else
-      skip "$target (does not exist)"
-    fi
+    unlink_managed "$config" "$target"
   done
 
-  local opencode_source="$DOTFILES/config/opencode"
-  local opencode_target="$config_home/opencode"
-  local opencode_entry
-  for opencode_entry in AGENTS.md opencode.json agents commands tools; do
-    local managed_target="$opencode_target/$opencode_entry"
-    if [ -L "$managed_target" ] && [ "$(readlink "$managed_target")" = "$opencode_source/$opencode_entry" ]; then
-      step "Removing $managed_target"
-      rm "$managed_target"
-      ok "Removed"
-    fi
-  done
-  if [ -d "$opencode_source/skills" ]; then
-    local skill
-    for skill in "$opencode_source"/skills/*; do
-      local skill_target="$opencode_target/skills/$(basename "$skill")"
-      if [ -L "$skill_target" ] && [ "$(readlink "$skill_target")" = "$skill" ]; then
-        step "Removing $skill_target"
-        rm "$skill_target"
-        ok "Removed"
-      fi
-    done
-  fi
+  unlink_managed "$DOTFILES/git/.gitconfig" "$HOME/.gitconfig"
+  unlink_managed "$DOTFILES/git/.gitignore_global" "$HOME/.gitignore_global"
+  unlink_managed "$DOTFILES/Application Support/com.mitchellh.ghostty/config" \
+    "$HOME/Library/Application Support/com.mitchellh.ghostty/config"
   section_end
-}
-
-setup_opencode_symlinks() {
-  local source="$DOTFILES/config/opencode"
-  local target="$config_home/opencode"
-  mkdir -p "$target" "$target/skills"
-
-  local entry
-  for entry in AGENTS.md opencode.json agents commands tools; do
-    local managed_source="$source/$entry"
-    local managed_target="$target/$entry"
-    if [ -L "$managed_target" ] && [ "$(readlink "$managed_target")" = "$managed_source" ]; then
-      ok "~/.config/opencode/$entry"
-    elif [ -e "$managed_target" ] || [ -L "$managed_target" ]; then
-      warn "Not replacing existing OpenCode path: $managed_target"
-    else
-      ln -s "$managed_source" "$managed_target"
-      ok "~/.config/opencode/$entry"
-    fi
-  done
-
-  local skill
-  for skill in "$source"/skills/*; do
-    local skill_target="$target/skills/$(basename "$skill")"
-    if [ -L "$skill_target" ] && [ "$(readlink "$skill_target")" = "$skill" ]; then
-      ok "~/.config/opencode/skills/$(basename "$skill")"
-    elif [ -e "$skill_target" ] || [ -L "$skill_target" ]; then
-      warn "Not replacing existing OpenCode skill: $skill_target"
-    else
-      ln -s "$skill" "$skill_target"
-      ok "~/.config/opencode/skills/$(basename "$skill")"
-    fi
-  done
 }
 
 setup_symlinks() {
@@ -179,14 +169,13 @@ setup_symlinks() {
       continue
     fi
     target="$config_home/$name"
-    if [ -e "$target" ]; then
-      skip "~/.config/$name already exists"
-    else
-      ln -s "$config" "$target"
-      ok "~/.config/$name"
-    fi
+    link_managed "$config" "$target" "~/.config/$name"
   done
-  setup_opencode_symlinks
+
+  link_managed "$DOTFILES/git/.gitconfig" "$HOME/.gitconfig" "~/.gitconfig"
+  link_managed "$DOTFILES/git/.gitignore_global" "$HOME/.gitignore_global" "~/.gitignore_global"
+  link_managed "$DOTFILES/Application Support/com.mitchellh.ghostty/config" \
+    "$HOME/Library/Application Support/com.mitchellh.ghostty/config" "Ghostty config"
   section_end
 }
 
@@ -202,14 +191,29 @@ copy() {
     if [ "$name" = "opencode" ]; then
       continue
     fi
-    step "Copying $name"
-    cp -R "$config" "$config_home/$name"
-    ok "$name"
+    if [ -e "$config_home/$name" ] || [ -L "$config_home/$name" ]; then
+      warn "Not replacing existing path: $config_home/$name"
+    else
+      step "Copying $name"
+      cp -R "$config" "$config_home/$name"
+      ok "$name"
+    fi
   done
-  step "Copying managed OpenCode config"
-  mkdir -p "$config_home/opencode"
-  cp -R "$DOTFILES/config/opencode/." "$config_home/opencode/"
-  ok "opencode"
+
+  local source target
+  while IFS='|' read -r source target; do
+    mkdir -p "$(dirname "$target")"
+    if [ -e "$target" ] || [ -L "$target" ]; then
+      warn "Not replacing existing path: $target"
+    else
+      cp "$source" "$target"
+      ok "$target"
+    fi
+  done <<EOF
+$DOTFILES/git/.gitconfig|$HOME/.gitconfig
+$DOTFILES/git/.gitignore_global|$HOME/.gitignore_global
+$DOTFILES/Application Support/com.mitchellh.ghostty/config|$HOME/Library/Application Support/com.mitchellh.ghostty/config
+EOF
   section_end
 }
 
@@ -228,7 +232,7 @@ setup_git() {
   git config -f ~/.gitconfig.local user.name "${name:-$defaultName}"
   git config -f ~/.gitconfig.local user.email "${email:-$defaultEmail}"
   git config -f ~/.gitconfig.local github.user "${github:-$defaultGithub}"
-  git config --global credential.helper "osxkeychain"
+  git config -f ~/.gitconfig.local credential.helper "osxkeychain"
 
   ok "~/.gitconfig.local written"
   section_end
@@ -239,7 +243,7 @@ setup_homebrew() {
 
   if ! command -v brew &>/dev/null; then
     step "Installing Homebrew..."
-    curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash --login
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     ok "Homebrew installed"
   else
     ok "Homebrew already installed"
@@ -315,9 +319,11 @@ setup_macos() {
   done
 
   # Home/End key bindings
-  step "Fix Home/End keys"
-  mkdir -p ~/Library/KeyBindings
-  cat >~/Library/KeyBindings/DefaultKeyBinding.dict <<'EOF'
+  local keybindings="$HOME/Library/KeyBindings/DefaultKeyBinding.dict"
+  if [ ! -e "$keybindings" ]; then
+    step "Fix Home/End keys"
+    mkdir -p "$HOME/Library/KeyBindings"
+    cat >"$keybindings" <<'EOF'
 {
   "\UF729"   = moveToBeginningOfParagraph:;
   "\UF72B"   = moveToEndOfParagraph:;
@@ -329,10 +335,10 @@ setup_macos() {
   "^$\UF72B" = moveToEndOfDocumentAndModifySelection:;
 }
 EOF
-  ok "Home/End keys fixed"
-
-  step "Removing quarantine from Hidden Bar"
-  sudo xattr -r -d com.apple.quarantine /Applications/Hidden\ Bar.app 2>/dev/null && ok "Hidden Bar" || skip "Hidden Bar not found"
+    ok "Home/End keys fixed"
+  else
+    skip "$keybindings already exists"
+  fi
 
   step "Restarting affected apps..."
   for app in Safari Finder Dock SystemUIServer; do killall "$app" &>/dev/null || true; done
@@ -353,6 +359,7 @@ case "${1:-}" in
   shell)    setup_shell ;;
   macos)    setup_macos ;;
   all)
+    backup
     setup_symlinks
     setup_homebrew
     setup_shell

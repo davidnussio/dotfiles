@@ -1,26 +1,17 @@
 # vim:ft=ruby
 
+tap "terraform-linters/tap", trusted: { casks: ["tflint"] }
+
 if OS.mac?
-  tap "lotyp/homebrew-formulae"
-
-  # OS specific tools
-  brew "noti" # Notification tool
-  brew "mas" # Mac App Store CLI
-  brew "lotyp/formulae/dockutil" # Dock management tool
-  brew "watch" # Watch command
-
   # Apps
   cask "google-chrome@beta" # Web browser
   cask "chatgpt" # AI assistant
   cask "protonvpn" # VPN service
   cask "raycast" # Productivity tool
-  # cask "ps-pulse" # VPN client (commented out)
   cask "microsoft-teams" # Communication tool
   cask "zoom" # Video conferencing
   cask "dbeaver-community" # Database management tool
   cask "mongodb-compass" # MongoDB GUI
-  # cask "appflowy" #
-  # cask "notion" # Note-taking app
   cask "jordanbaird-ice"
   cask "discord" # Chat app
   cask "omnissa-horizon-client" # VDI client
@@ -30,14 +21,12 @@ if OS.mac?
   cask "balenaetcher" # Flash OS images
   cask "lm-studio" #
   cask "rectangle" # Window management
+  cask "orbstack" # Container and Linux VM runtime
+  cask "session-manager-plugin" # AWS Systems Manager sessions
 
-
-  # Dev Tools
+  # Dev tools
   cask "visual-studio-code" # Code editor
-  # cask "devtoys" # Developer utilities
-  # cask "orbstack" # Developer utilities
   cask "obsidian" # Note-taking app
- # cast "bruno" # Developer utilities
 
   # Fonts
   cask "font-fira-code" # Programming font
@@ -46,24 +35,19 @@ if OS.mac?
   cask "font-recursive-code" # Programming font
   cask "font-monaspace" # Monospaced font
 
-  # Trying apps
   cask "homerow"
 
 end
 
 # Command-line tools
 brew "davidnussio/homebrew-tap/envsec"
-brew "htop" # Process viewer
 brew "git" # Version control
 brew "gh" # GitHub CLI
-brew "ag" # The silver searcher
 brew "fish" # Friendly interactive shell
 brew "fisher" # Fish shell plugin manager
 brew "starship" # Shell prompt
 brew "mise" # Shell environment manager
 brew "neovim" # Text editor
-brew "httpie" # HTTP client
-brew "stow" # Dotfile manager
 brew "zoxide" # Directory jumper
 brew "bat" # Cat clone with syntax highlighting
 brew "eza" # Modern ls
@@ -75,7 +59,6 @@ brew "zellij" # Terminal multiplexer
 brew "golang" # Go programming language
 brew "docker" # Container runtime
 brew "vsce" # Visual Studio Code
-brew "podman" # Container runtime
 brew "kubectl" # Kubernetes CLI
 brew "croc" # Secure file transfer
 brew "vercel-cli" # Vercel CLI
@@ -83,21 +66,18 @@ brew "firebase-cli" # Firebase CLI
 brew "yt-dlp" # YouTube downloader
 brew "ffmpeg" # Multimedia framework
 brew "luarocks" # Lua package manager
-#brew "openfortivpn" # Fortinet VPN client
 brew "yazi" # Filesystem manager
 brew "sevenzip" # 7zip
 brew "poppler" # PDF tools
 brew "imagemagick" # Image processing
-brew "selene" # Lua formatter
+brew "selene" # Lua linter
 brew "graphviz" # Graph visualization
 brew "nmap" # Network scanner
 brew "supabase/tap/supabase"
 brew "gemini-cli" # Gemini CLI
-# cask "dotnet-sdk" # .NET SDK
 brew "biome"
 brew "btop"
 brew "procs" # Modern process viewer
-# brew "backlog-md"
 cask "claude-code@latest"
 cask "claude"
 cask "yaak"
@@ -126,10 +106,53 @@ brew "mkcert"       # certificati HTTPS locali
 brew "oha"          # load testing HTTP
 brew "hyperfine"    # benchmarking comandi shell
 brew "viddy"        # watch moderno con diff
+brew "topgrade"     # aggiorna package manager e toolchain
+brew "atuin"        # shell history contestuale
+brew "direnv"       # environment per-directory
+brew "just"         # project command runner
+brew "watchexec"    # rilancia comandi al cambiare dei file
+brew "shellcheck"   # lint shell script
+brew "shfmt"         # format shell script
+brew "actionlint"    # lint GitHub Actions
+brew "yq"            # YAML processor
+brew "taplo"         # TOML formatter e language server
+brew "lefthook"      # Git hooks veloci
+
+# AWS / Terraform / Kubernetes
+brew "awscli"
+cask "terraform-linters/tap/tflint"
+brew "terraform-docs"
+brew "kustomize"
+brew "kubeconform"
+brew "kind"
 
 # Sicurezza
 brew "trufflehog"   # scan segreti in git history
 brew "trivy"        # vulnerability scanner container/filesystem
+brew "sops"         # encrypted configuration files
+brew "age"          # modern file encryption
+brew "hadolint"     # Dockerfile lint
+brew "cosign"       # sign and verify artifacts
+brew "syft"         # generate SBOMs
+brew "osv-scanner"  # dependency vulnerability scanner
+brew "dive"         # inspect container image layers
+
+# Networking / observability
+brew "grpcurl"
+brew "websocat"
+brew "lnav"
 
 # Monitoring
 brew "bandwhich"    # monitor traffico di rete per processo
+
+# Nerd utilities
+brew "tokei"        # code statistics
+brew "dust"         # disk usage
+brew "duf"          # filesystem usage
+brew "sd"           # search and replace
+brew "hexyl"        # hex viewer
+brew "glow"         # Markdown terminal viewer
+
+# Git signing
+brew "gnupg"
+brew "pinentry-mac"

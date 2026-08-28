@@ -1,3 +1,4 @@
 .vscode
 *.log
-*lock.json
+/config/opencode/
+/config/fish/fish_variables

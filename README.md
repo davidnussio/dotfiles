@@ -17,11 +17,14 @@ My macOS dev machine configuration — batteries included, opinions strong.
 
 ## ⚡ Quick Install
 
-One command to rule them all:
+Clone the repository, then run the bootstrap:
 
 ```bash
-curl https://raw.githubusercontent.com/davidnussio/dotfiles/master/scripts/install.sh | bash
+git clone https://github.com/davidnussio/dotfiles.git ~/.dotfiles
+~/.dotfiles/install.sh all
 ```
+
+The `all` command starts with a timestamped backup of existing managed files.
 
 ---
 
@@ -40,7 +43,6 @@ dotfiles/
 │   ├── zellij/                 # Multiplexer config + development layout
 │   ├── starship.toml           # Starship prompt
 │   ├── mise/                   # mise-en-place runtime manager
-│   ├── opencode/               # Global agents, skills, commands and tools
 │   └── topgrade.toml           # Topgrade updater config
 └── Application Support/
     └── com.mitchellh.ghostty/  # Ghostty terminal config
@@ -68,11 +70,8 @@ dotfiles/
 | Load testing | [oha](https://github.com/hatoo/oha) |
 | Kubernetes | [k9s](https://k9scli.io) + [kubectx](https://github.com/ahmetb/kubectx) + [stern](https://github.com/stern/stern) |
 | Security | [trufflehog](https://github.com/trufflesecurity/trufflehog) + [trivy](https://trivy.dev) |
-| AI coding | [OpenCode](https://opencode.ai) with versioned global workflows |
-
-### OpenCode
-
-`./install.sh link` links the managed OpenCode configuration into `~/.config/opencode` while preserving local plugins, downloaded models, dependencies, and TUI state. In OpenCode, use `Tab` for the `architect` primary agent, `@reviewer` or another specialist for subagents, and `/implement`, `/review`, `/debug`, `/test-changed`, or `/pr` for repeatable workflows.
+| Shell history | [Atuin](https://atuin.sh) |
+| Secrets | [SOPS](https://getsops.io) + [age](https://age-encryption.org) |
 
 ---
 

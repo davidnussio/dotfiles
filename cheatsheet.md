@@ -32,7 +32,6 @@
 | `fsource` | `source ~/.config/fish/config.fish` | Reload fish config |
 | `efish` | `nvim ~/.config/fish/config.fish` | Edit fish config |
 | `e` | `envsec` | Manage env secrets |
-| `tw` | `timew` | Timewarrior time tracking |
 | `playground` | `cd ~/Developer/playground && code .` | Jump to playground |
 | `zdev` | Project layout or default Zellij | Open a workspace in the current directory |
 | `za <name>` | `zellij attach --create <name>` | Attach to or create a session |
@@ -51,8 +50,8 @@
 | `catl` | `bat` | Cat with line numbers |
 | `ff` | `fzf --preview 'bat ...'` | Fuzzy find with preview |
 | `fd` | `fd` | Fast file finder |
-| `lst` | `tree -a -I "node_modules\|.git\|..."` | Tree, ignoring noise |
-| `agi` | `ag --ignore node_modules ...` | Silver searcher, no noise |
+| `lst` | `eza --tree --level=3 --all --git-ignore` | Tree, ignoring repository noise |
+| `rgi` | `rg --hidden --glob ...` | Ripgrep including hidden files, excluding generated noise |
 
 ### Git Abbreviations
 

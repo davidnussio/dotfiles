@@ -1,0 +1,34 @@
+name: Validate dotfiles
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install validators
+        run: brew install fish shellcheck starship taplo zellij
+
+      - name: Validate package manifest
+        run: brew bundle list --file=Brewfile
+
+      - name: Validate bootstrap and Fish
+        run: |
+          bash -n install.sh
+          shellcheck --severity=error install.sh
+          fish -n config/fish/config.fish config/fish/conf.d/*.fish config/fish/functions/*.fish
+
+      - name: Validate TOML configuration
+        run: taplo check config/mise/config.toml config/starship.toml config/topgrade.toml
+
+      - name: Validate Starship and Zellij
+        run: |
+          STARSHIP_CONFIG="$PWD/config/starship.toml" starship explain
+          XDG_CONFIG_HOME="$PWD/config" zellij setup --check

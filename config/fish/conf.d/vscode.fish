@@ -1,3 +1,4 @@
 # Vscode integration
-string match -q "$TERM_PROGRAM" "vscode"
-and . (/opt/homebrew/bin/code --locate-shell-integration-path fish)
+if string match -q "$TERM_PROGRAM" "vscode"; and type -q code
+    . (code --locate-shell-integration-path fish)
+end

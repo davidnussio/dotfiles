@@ -8,4 +8,7 @@ uv = "latest"
 [settings]
 verbose = false
 experimental = true
+lockfile = true
+lockfile_platforms = ["macos-arm64", "macos-x64", "linux-x64"]
+minimum_release_age = "7d"
 # idiomatic_version_file_enable_tools = ["node"]
