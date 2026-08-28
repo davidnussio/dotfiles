@@ -96,6 +96,7 @@ brew "gemini-cli" # Gemini CLI
 # cask "dotnet-sdk" # .NET SDK
 brew "biome"
 brew "btop"
+brew "procs" # Modern process viewer
 # brew "backlog-md"
 cask "claude-code@latest"
 cask "claude"
