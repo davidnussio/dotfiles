@@ -6,8 +6,12 @@ layout {
         }
     }
 
-    tab name="ai" {
+    tab name="opencode" {
         pane command="opencode"
+    }
+
+    tab name="ai" {
+        pane command="claude"
     }
 
     tab name="editor" focus=true {
@@ -20,6 +24,10 @@ layout {
             pane
             pane
         }
+    }
+
+    tab name="finder" {
+      pane command="yazi"
     }
 
     tab name="git" {
