@@ -40,6 +40,12 @@ if status is-interactive
     direnv hook fish | source
   end
 
+  if status is-interactive
+    and test -t 1
+    and not set -q ZELLIJ
+    exec zellij
+  end
+
   # Default editors for Git, OpenCode, and other CLI tools
   set -gx EDITOR nvim
   set -gx VISUAL nvim
