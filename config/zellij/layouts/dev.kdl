@@ -14,16 +14,11 @@ layout {
         pane command="claude"
     }
 
-    tab name="editor" focus=true {
+    tab name="editor" {
         pane command="nvim"
     }
 
-    tab name="run" split_direction="vertical" {
-        pane name="server"
-        pane name="shell" split_direction="horizontal" {
-            pane
-            pane
-        }
+    tab name="terminal" focus=true{
     }
 
     tab name="finder" {

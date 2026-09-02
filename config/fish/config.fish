@@ -49,16 +49,49 @@ if status is-interactive
   abbr -a fsource source ~/.config/fish/config.fish
   abbr -a o open
 
-  function zdev
-    if test -f .zellij/dev.kdl
-      zellij --layout .zellij/dev.kdl
-    else
-      zellij --layout dev
+  # function zdev
+  #   if test -f .zellij/dev.kdl
+  #     zellij --layout .zellij/dev.kdl
+  #   else
+  #     zellij --layout dev
+  #   end
+  # end
+
+  function zattach
+    if test (count $argv) -lt 1
+        echo "Usage: zattach <layout-name>"
+        return 1
     end
-  end
+
+    if not set -q ZELLIJ
+        echo "Not inside a Zellij session"
+        return 1
+    end
+
+    set name $argv[1]
+    set project_root $PWD
+    set layout "$project_root/.zellij/$name.kdl"
+
+    if not test -f "$layout"
+        echo "Layout not found: $layout"
+        return 1
+    end
+
+    # 1. Crea il tab normalmente -> usa il template globale
+    zellij action new-tab \
+        --name "$name" \
+        --cwd "$project_root"
+
+    # 2. Cambia soltanto il contenuto del nuovo tab
+    #    mantenendo tab-bar/status-bar/plugin del layout globale
+    zellij action override-layout "$layout" \
+        --retain-existing-plugin-panes \
+        --apply-only-to-active-tab
+end
 
   abbr -a zj 'zellij'
   abbr -a zterm 'zellij --layout term'
+  abbr -a zdev 'zellij --layout dev'
   abbr -a zforensics 'zellij --layout macos-forensics'
   abbr -a za 'zellij attach --create'
   abbr -a e envsec
