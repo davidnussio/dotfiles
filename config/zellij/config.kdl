@@ -2,6 +2,7 @@
 theme "nord"
 default_layout "compact"
 default_shell "fish"
+// default_mode "locked"
 
 pane_frames true
 mouse_mode true

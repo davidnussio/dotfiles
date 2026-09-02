@@ -40,12 +40,6 @@ if status is-interactive
     direnv hook fish | source
   end
 
-  if status is-interactive
-    and test -t 1
-    and not set -q ZELLIJ
-    exec zellij
-  end
-
   # Default editors for Git, OpenCode, and other CLI tools
   set -gx EDITOR nvim
   set -gx VISUAL nvim
@@ -63,6 +57,7 @@ if status is-interactive
     end
   end
 
+  abbr -a zj 'zellij'
   abbr -a zterm 'zellij --layout term'
   abbr -a zforensics 'zellij --layout macos-forensics'
   abbr -a za 'zellij attach --create'
