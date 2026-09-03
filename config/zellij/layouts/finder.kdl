@@ -1,0 +1,17 @@
+layout {
+    default_tab_template {
+        children
+        pane size=1 borderless=true {
+            plugin location="zellij:compact-bar"
+        }
+    }
+
+    tab name="finder" {
+        pane command="yazi"
+    }
+
+    tab name="terminal" {
+        pane name="shell"
+    }
+
+}

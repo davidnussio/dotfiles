@@ -90,6 +90,7 @@ if status is-interactive
 end
 
   abbr -a zj 'zellij'
+  abbr -a zf 'zellij --layout finder'
   abbr -a zterm 'zellij --layout term'
   abbr -a zdev 'zellij --layout dev'
   abbr -a zforensics 'zellij --layout macos-forensics'
