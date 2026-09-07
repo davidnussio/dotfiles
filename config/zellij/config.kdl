@@ -28,9 +28,11 @@ ui {
 
 // Alt navigation stays out of Neovim's Ctrl-h/j/k/l path.
 keybinds {
+    // Let the shell handle Alt-Right for forward-word navigation.
+    unbind "Alt Right"
     normal {
         bind "Alt h" "Alt Left" { MoveFocusOrTab "Left"; }
-        bind "Alt l" "Alt Right" { MoveFocusOrTab "Right"; }
+        bind "Alt l" { MoveFocusOrTab "Right"; }
         bind "Alt j" "Alt Down" { MoveFocus "Down"; }
         bind "Alt k" "Alt Up" { MoveFocus "Up"; }
         bind "Alt n" { NewPane; }

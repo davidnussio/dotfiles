@@ -171,3 +171,4 @@ function __zoxide_z_complete
     __zoxide_pwd | read -lz curr_dir
     command zoxide query -l --exclude "$curr_dir" -- $query 2>/dev/null
 end
+fish_add_path /opt/homebrew/opt/rustup/bin

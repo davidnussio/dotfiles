@@ -2,4 +2,3 @@
 *.log
 /config/opencode/
 /config/fish/fish_variables
-/config/zellij/plugins/*.wasm
