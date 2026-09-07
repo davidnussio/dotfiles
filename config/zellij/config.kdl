@@ -39,4 +39,14 @@ keybinds {
         bind "Alt [" { GoToPreviousTab; }
         bind "Alt ]" { GoToNextTab; }
     }
+    // Command palette (github.com/rashidalnaemi/zellij-commandpalette).
+    // Alt p instead of Ctrl k: Ctrl-k is Neovim/fish territory.
+    shared_except "locked" {
+        bind "Alt p" {
+            LaunchOrFocusPlugin "file:~/.config/zellij/plugins/zellij-commandpalette.wasm" {
+                floating true
+                move_to_focused_tab true
+            }
+        }
+    }
 }

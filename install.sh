@@ -217,6 +217,31 @@ EOF
   section_end
 }
 
+setup_zellij_plugins() {
+  title "Zellij plugins"
+  local plugins_dir="$DOTFILES/config/zellij/plugins"
+  local version="v0.1.1"
+  local sha256="5065acd02a8af118bc43fd126c83627bb756fa30725f30864f382a53bf22beff"
+  local url="https://github.com/rashidalnaemi/zellij-commandpalette/releases/download/$version/zellij-commandpalette.wasm"
+  local target="$plugins_dir/zellij-commandpalette.wasm"
+  mkdir -p "$plugins_dir"
+
+  if [ -f "$target" ] && echo "$sha256  $target" | shasum -a 256 -c --status; then
+    skip "zellij-commandpalette $version already installed"
+  else
+    step "Downloading zellij-commandpalette $version"
+    curl --fail --location --silent --show-error "$url" --output "$target.tmp"
+    if echo "$sha256  $target.tmp" | shasum -a 256 -c --status; then
+      mv "$target.tmp" "$target"
+      ok "zellij-commandpalette $version"
+    else
+      rm -f "$target.tmp"
+      error "zellij-commandpalette checksum mismatch, download discarded"
+    fi
+  fi
+  section_end
+}
+
 setup_git() {
   title "Git config"
 
@@ -356,12 +381,14 @@ case "${1:-}" in
   copy)     copy ;;
   git)      setup_git ;;
   homebrew) setup_homebrew ;;
+  zellij)   setup_zellij_plugins ;;
   shell)    setup_shell ;;
   macos)    setup_macos ;;
   all)
     backup
     setup_symlinks
     setup_homebrew
+    setup_zellij_plugins
     setup_shell
     setup_git
     setup_macos
@@ -377,6 +404,7 @@ case "${1:-}" in
     echo -e "    ${C_CYAN}backup${C_GRAY}    Backup existing configs"
     echo -e "    ${C_CYAN}git${C_GRAY}       Configure git identity"
     echo -e "    ${C_CYAN}homebrew${C_GRAY}  Install Homebrew + Brewfile"
+    echo -e "    ${C_CYAN}zellij${C_GRAY}    Download pinned Zellij plugins"
     echo -e "    ${C_CYAN}shell${C_GRAY}     Set fish as default shell"
     echo -e "    ${C_CYAN}macos${C_GRAY}     Apply macOS defaults"
     echo -e "    ${C_CYAN}all${C_GRAY}       Run link + homebrew + shell + git + macos"

@@ -103,6 +103,7 @@ runtime shells, and lazygit using the compact Ayu Mirage interface.
 | `Alt+T` | Create a tab |
 | `Alt+F` | Toggle pane fullscreen |
 | `Alt+[` / `Alt+]` | Previous / next tab |
+| `Alt+P` | Command palette: search and run any bound action |
 
 ### Navigation & Files
 
