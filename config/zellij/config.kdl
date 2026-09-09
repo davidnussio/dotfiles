@@ -28,22 +28,29 @@ ui {
 
 // Alt navigation stays out of Neovim's Ctrl-h/j/k/l path.
 keybinds {
-    // Let the shell handle Alt-Right for forward-word navigation.
-    unbind "Alt Right"
     normal {
         bind "Alt h" "Alt Left" { MoveFocusOrTab "Left"; }
         bind "Alt l" { MoveFocusOrTab "Right"; }
         bind "Alt j" "Alt Down" { MoveFocus "Down"; }
         bind "Alt k" "Alt Up" { MoveFocus "Up"; }
         bind "Alt n" { NewPane; }
-        bind "Alt f" { ToggleFocusFullscreen; }
+        bind "Alt z" { ToggleFocusFullscreen; }
         bind "Alt t" { NewTab; }
         bind "Alt [" { GoToPreviousTab; }
         bind "Alt ]" { GoToNextTab; }
     }
-    // Command palette (github.com/rashidalnaemi/zellij-commandpalette).
-    // Alt p instead of Ctrl k: Ctrl-k is Neovim/fish territory.
     shared_except "locked" {
+        // Ghostty rewrites Option-Left/Right into ESC b / ESC f before zellij
+        // sees them, so "Alt Right" never arrives and Alt f is what actually
+        // has to stay free for the shell's forward-word. Fullscreen moved to
+        // Alt z. These unbinds must live here, not at the keybinds root: the
+        // defaults declare Alt f / Alt Right inside shared_except "locked",
+        // and a root-level unbind does not reach them.
+        unbind "Alt f"
+        unbind "Alt Right"
+
+        // Command palette (github.com/rashidalnaemi/zellij-commandpalette).
+        // Alt p instead of Ctrl k: Ctrl-k is Neovim/fish territory.
         bind "Alt p" {
             LaunchOrFocusPlugin "file:~/.config/zellij/plugins/zellij-commandpalette.wasm" {
                 floating true
