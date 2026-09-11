@@ -72,7 +72,7 @@ backup() {
   title "Backup"
   local backup_dir="$HOME/dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
   step "Creating backup dir at $backup_dir"
-  mkdir -p "$backup_dir/config" "$backup_dir/git" "$backup_dir/ghostty"
+  mkdir -p "$backup_dir/config" "$backup_dir/git" "$backup_dir/ghostty" "$backup_dir/lazygit"
 
   for f in "$config_home/nvim" "$config_home/fish" "$config_home/zellij" \
     "$config_home/starship.toml" "$config_home/mise" "$config_home/topgrade.toml"; do
@@ -100,6 +100,14 @@ backup() {
     ok "$ghostty_config"
   else
     skip "$ghostty_config (symlink or missing)"
+  fi
+
+  local lazygit_config="$HOME/Library/Application Support/lazygit/config.yml"
+  if [ -e "$lazygit_config" ] && [ ! -L "$lazygit_config" ]; then
+    cp "$lazygit_config" "$backup_dir/lazygit/config.yml"
+    ok "$lazygit_config"
+  else
+    skip "$lazygit_config (symlink or missing)"
   fi
   section_end
 }
@@ -152,6 +160,8 @@ cleanup_symlinks() {
   unlink_managed "$DOTFILES/git/.gitignore_global" "$HOME/.gitignore_global"
   unlink_managed "$DOTFILES/Application Support/com.mitchellh.ghostty/config" \
     "$HOME/Library/Application Support/com.mitchellh.ghostty/config"
+  unlink_managed "$DOTFILES/Application Support/lazygit/config.yml" \
+    "$HOME/Library/Application Support/lazygit/config.yml"
   section_end
 }
 
@@ -176,6 +186,8 @@ setup_symlinks() {
   link_managed "$DOTFILES/git/.gitignore_global" "$HOME/.gitignore_global" "~/.gitignore_global"
   link_managed "$DOTFILES/Application Support/com.mitchellh.ghostty/config" \
     "$HOME/Library/Application Support/com.mitchellh.ghostty/config" "Ghostty config"
+  link_managed "$DOTFILES/Application Support/lazygit/config.yml" \
+    "$HOME/Library/Application Support/lazygit/config.yml" "Lazygit config"
   section_end
 }
 
@@ -213,6 +225,7 @@ copy() {
 $DOTFILES/git/.gitconfig|$HOME/.gitconfig
 $DOTFILES/git/.gitignore_global|$HOME/.gitignore_global
 $DOTFILES/Application Support/com.mitchellh.ghostty/config|$HOME/Library/Application Support/com.mitchellh.ghostty/config
+$DOTFILES/Application Support/lazygit/config.yml|$HOME/Library/Application Support/lazygit/config.yml
 EOF
   section_end
 }
@@ -328,6 +341,7 @@ setup_macos() {
     "Disable press-and-hold|defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false"
     "Fast key repeat|defaults write NSGlobalDomain KeyRepeat -int 2"
     "Short key repeat delay|defaults write NSGlobalDomain InitialKeyRepeat -int 25"
+    "Disable F11 Show Desktop shortcut|defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 36 '{ enabled = 0; value = { parameters = (65535, 103, 8388608); type = standard; }; }'"
     "Trackpad tap to click|defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true"
     "Disable notification center swipe|defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadTwoFingerFromRightEdgeSwipeGesture -int 0"
     "Screenshots → ~/Screenshots|mkdir -p ~/Screenshots && defaults write com.apple.screencapture location ~/Screenshots"

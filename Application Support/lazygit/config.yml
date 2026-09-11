@@ -1,0 +1,18 @@
+gui:
+  theme:
+    selectedLineBgColor:
+      - "#26343F"
+    selectedRangeBgColor:
+      - "#26343F"
+    inactiveBorderColor:
+      - "#797D87"
+    activeBorderColor:
+      - "#50A4E9"
+      - bold
+    searchingActiveBorderColor:
+      - "#5EB7FF"
+      - bold
+    optionsFgColor:
+      - "#50A4E9"
+    optionsSelectedBgColor:
+      - "#26343F"
