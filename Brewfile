@@ -80,6 +80,7 @@ brew "btop"
 brew "procs" # Modern process viewer
 cask "claude-code@latest"
 cask "claude"
+cask "openusage" # AI usage limits in menu bar (API locale su :6736)
 cask "yaak"
 
 # HTTP / API testing
