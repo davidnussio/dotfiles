@@ -13,3 +13,7 @@ theme = "Ayu Mirage"
 
 cursor-style = block
 cursor-style-blink = true
+
+macos-option-as-alt = left
+term = xterm-ghostty
+shell-integration-features = ssh-terminfo,ssh-env
