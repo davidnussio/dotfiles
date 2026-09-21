@@ -72,6 +72,11 @@ url = "https://nodejs.org/dist/v26.8.2/node-v26.8.2-darwin-arm64.tar.gz"
 checksum = "sha256:adb8feb2d4987df3d72d2ec46f4fc4b58039c859b8c3f0e3cc2d3c6cbaf8629c"
 url = "https://nodejs.org/dist/v26.8.2/node-v26.8.2-darwin-x64.tar.gz"
 
+[[tools."npm:@zvec/zvec-grep"]]
+version = "0.2.2"
+backend = "npm:@zvec/zvec-grep"
+specifiers = ["latest"]
+
 [[tools.python]]
 version = "3.14.7"
 backend = "core:python"

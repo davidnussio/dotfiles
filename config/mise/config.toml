@@ -4,6 +4,7 @@ bun = "latest"
 node = "26"
 python = "3.14"
 uv = "latest"
+"npm:@zvec/zvec-grep" = "latest"
 
 [settings]
 verbose = false
