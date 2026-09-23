@@ -2,5 +2,4 @@
 *.log
 /config/opencode/
 /config/fish/fish_variables
-
-mise.lock
+/config/mise/mise.lock
