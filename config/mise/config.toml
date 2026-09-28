@@ -5,6 +5,7 @@ node = "26"
 python = "3.14"
 uv = "latest"
 "npm:@zvec/zvec-grep" = "latest"
+maven = "latest"
 
 [settings]
 verbose = false
