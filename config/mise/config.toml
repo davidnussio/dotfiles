@@ -1,5 +1,5 @@
 [tools]
-java = "26"
+java = "27"
 bun = "latest"
 node = "26"
 python = "3.14"
