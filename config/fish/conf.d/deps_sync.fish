@@ -105,6 +105,6 @@ function __deps_sync_postexec --on-event fish_postexec
     set -l last_status $status
     set -q deps_sync_disabled; and return
     test $last_status -eq 0; or return
-    string match -qr '^\s*(command\s+)?(git|lazygit|gh|gt)\b' -- $argv[1]; or return
+    string match -qr '^\s*(command\s+)?(git(\s+-\S+(\s+\S+)?)*?\s+(pull|checkout|switch|merge|rebase|reset|restore|cherry-pick|revert|am|stash\s+(pop|apply))|lazygit|gh\s+pr\s+checkout|gt\s+(checkout|co|sync|restack|rs|merge|up|down|pull|create|c|modify|m))\b' -- $argv[1]; or return
     deps_sync
 end
