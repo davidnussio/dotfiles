@@ -48,6 +48,11 @@ if status is-interactive
 
  # Abbreviations
   abbr -a fsource source ~/.config/fish/config.fish
+  # ... → ../.., .... → ../../.. and so on
+  function __dotdot_expand
+    string repeat -n (math (string length -- $argv[1]) - 1) ../ | string trim -r -c /
+  end
+  abbr -a dotdot --position anywhere --regex '^\.\.\.+$' --function __dotdot_expand
   abbr -a o open
 
   # function zdev

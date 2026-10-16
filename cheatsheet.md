@@ -12,10 +12,10 @@
 | `Ctrl+R` | Fuzzy search command history |
 | `Alt+C` | `cd` into directory (fuzzy) |
 | `Alt+Shift+C` | `cd` into directory (fuzzy, include hidden) |
-| `Alt+G` | Open file with default app |
-| `Alt+O` | Open file in `$EDITOR` |
-| `Alt+←` / `Alt+↑` | Go to previous directory |
-| `Alt+→` | Go to next directory |
+| `Ctrl+G` | Open file with default app |
+| `Ctrl+O` | Open file in `$EDITOR` |
+| `Alt+↑` / `Shift+Alt+←` | Go to previous directory (`Alt+←` too, on an empty line) |
+| `Shift+Alt+→` | Go to next directory (`Alt+→` too, on an empty line) |
 | `...` | Expands to `../..` (and so on) |
 | `Alt+/` | Browse these docs with `dothelp`, insert the picked command |
 
@@ -34,7 +34,7 @@
 | `efish` | `nvim ~/.config/fish/config.fish` | Edit fish config |
 | `e` | `envsec` | Manage env secrets |
 | `playground` | `cd ~/Developer/playground && code .` | Jump to playground |
-| `zdev` | Project layout or default Zellij | Open a workspace in the current directory |
+| `zdev` | `zellij --layout dev` | Open the dev workspace in the current directory |
 | `za <name>` | `zellij attach --create <name>` | Attach to or create a session |
 | `dothelp [query]` | `bin/dothelp` | Yazi-style browser for this cheatsheet, fish, packages and dotfiles |
 
@@ -70,6 +70,7 @@
 | `gcm` | `git checkout master` | Checkout master |
 | `gbb` | `git checkout -` | Previous branch |
 | `gpu` | `git push` | Push |
+| `gpl` | `git pull` | Pull |
 | `git-clean-branches` | `git fetch --prune && git gc` | Prune dead branches |
 
 ---

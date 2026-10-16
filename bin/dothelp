@@ -229,18 +229,30 @@ def fish_words(rest):
 
 
 def parse_abbr(rest):
-    words, out, skip = fish_words(rest), [], False
+    words, out, opts, flag = fish_words(rest), [], {}, None
     for w in words:
-        if skip:
-            skip = False
+        if flag:
+            opts[flag], flag = w, None
         elif w.startswith("-") and (not out or w.split("=")[0] in ABBR_OPTS_WITH_ARG):
             # abbr's own flags; once the name is known, other dashes belong to the expansion
-            skip = w.split("=")[0] in ABBR_OPTS_WITH_ARG and "=" not in w
+            key, eq, value = w.partition("=")
+            if key in ABBR_OPTS_WITH_ARG:
+                if eq:
+                    opts[key] = value
+                else:
+                    flag = key
         else:
             out.append(w)
     if not out:
         return None
-    return out[0], " ".join(out[1:])
+    expansion = " ".join(out[1:])
+    func = opts.get("--function") or opts.get("-f")
+    regex = opts.get("--regex") or opts.get("-r")
+    if not expansion and func:
+        expansion = f"output of {func}"
+    if regex:
+        expansion += f" (matches {regex})"
+    return out[0], expansion
 
 
 def parse_alias(rest):
