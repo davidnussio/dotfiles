@@ -17,14 +17,44 @@ My macOS dev machine configuration — batteries included, opinions strong.
 
 ## ⚡ Quick Install
 
-Clone the repository, then run the bootstrap:
+The whole machine is declared in [`mise.toml`](./mise.toml) and applied with
+[`mise bootstrap`](https://mise.jdx.dev/bootstrap.html): Homebrew formulae and
+casks, dotfile symlinks, macOS defaults, login shell, runtimes and a final setup
+task. Homebrew itself is not required — mise installs bottles and casks into
+`/opt/homebrew` on its own (an existing Homebrew keeps working alongside).
+
+On a fresh Mac:
 
 ```bash
-git clone https://github.com/davidnussio/dotfiles.git ~/.dotfiles
-~/.dotfiles/install.sh all
+curl https://mise.run | sh
+~/.local/bin/mise bootstrap --from https://github.com/davidnussio/dotfiles.git --from-dir ~/.dotfiles --prompt-vars
 ```
 
-The `all` command starts with a timestamped backup of existing managed files.
+`--prompt-vars` asks once for the git identity written to `~/.gitconfig.local`.
+
+From an existing checkout:
+
+```bash
+cd ~/.dotfiles
+mise trust
+mise bootstrap --dry-run      # preview every change
+mise bootstrap                # apply
+mise bootstrap status         # compare this machine with the config
+```
+
+Existing real files where a symlink should go stop the run; check them with
+`mise dot diff`, then rerun with `--force-dotfiles` to replace them.
+
+### Day-to-day
+
+From the checkout (`use` writes to `./mise.toml`):
+
+```bash
+mise bootstrap packages use brew:<formula>       # install and record a formula
+mise bootstrap packages use brew-cask:<cask>     # install and record an app
+mise bootstrap packages upgrade                  # upgrade declared packages (also run by topgrade)
+mise bootstrap packages prune --dry-run          # formulae no config declares
+```
 
 ---
 
@@ -32,8 +62,8 @@ The `all` command starts with a timestamped backup of existing managed files.
 
 ```
 dotfiles/
-├── Brewfile                    # All CLI tools & macOS apps via Homebrew
-├── install.sh                  # Bootstrap script
+├── mise.toml                   # mise bootstrap: packages, dotfiles, macOS defaults, shell
+├── macos/                      # Files copied into ~/Library
 ├── git/
 │   ├── .gitconfig              # Git config with delta, aliases, signing
 │   └── .gitignore_global       # Global gitignore
@@ -58,7 +88,8 @@ dotfiles/
 | Terminal | [Ghostty](https://ghostty.org) |
 | Editor | [Neovim](https://neovim.io) (lazy.nvim) + VSCode |
 | Multiplexer | [Zellij](https://zellij.dev) |
-| Package manager | [Homebrew](https://brew.sh) |
+| Machine setup | [mise bootstrap](https://mise.jdx.dev/bootstrap.html) |
+| Package manager | [Homebrew](https://brew.sh) formulae & casks, via mise |
 | Runtime manager | [mise](https://mise.jdx.dev) |
 | File navigation | [yazi](https://github.com/sxyazi/yazi) + [zoxide](https://github.com/ajeetdsouza/zoxide) + [fzf](https://github.com/junegunn/fzf) |
 | Git TUI | [lazygit](https://github.com/jesseduffield/lazygit) + [delta](https://github.com/dandavison/delta) |

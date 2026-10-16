@@ -1,0 +1,241 @@
+# Machine setup for macOS, applied with `mise bootstrap`.
+#
+#   mise bootstrap --dry-run      preview every change
+#   mise bootstrap --prompt-vars  apply (asks for the git identity once)
+#   mise bootstrap status         check this machine against the config
+#
+# Runtimes and dev tools live in the global config (config/mise/config.toml),
+# which is linked into ~/.config/mise below.
+
+# ─── Git identity (asked once per machine, never committed) ──────────────────
+[vars.git_name]
+default = "David Nussio"
+prompt = "Git author name"
+
+[vars.git_email]
+default = ""
+prompt = "Git email"
+
+[vars.github_user]
+default = "davidnussio"
+prompt = "GitHub user"
+
+# ─── Dotfiles → $HOME (symlinks) ─────────────────────────────────────────────
+[dotfiles]
+"~/.config/fish" = "config/fish"
+"~/.config/mise" = "config/mise"
+"~/.config/nvim" = "config/nvim"
+"~/.config/zellij" = "config/zellij"
+"~/.config/starship.toml" = "config/starship.toml"
+"~/.config/topgrade.toml" = "config/topgrade.toml"
+"~/.gitconfig" = "git/.gitconfig"
+"~/.gitignore_global" = "git/.gitignore_global"
+"~/Library/Application Support/com.mitchellh.ghostty/config" = "Application Support/com.mitchellh.ghostty/config"
+"~/Library/Application Support/lazygit/config.yml" = "Application Support/lazygit/config.yml"
+# Home/End move to line start/end in Cocoa text fields
+"~/Library/KeyBindings/DefaultKeyBinding.dict" = { source = "macos/DefaultKeyBinding.dict", mode = "copy" }
+
+# ─── Shell ───────────────────────────────────────────────────────────────────
+# The activation block already lives in config/fish/config.fish
+[bootstrap.mise_shell_activate]
+fish = "auto"
+
+[bootstrap.user]
+login_shell = "/opt/homebrew/bin/fish"
+
+# ─── macOS defaults ──────────────────────────────────────────────────────────
+[bootstrap.macos.finder]
+show_pathbar = true
+show_status_bar = true
+
+[bootstrap.macos.keyboard]
+key_repeat = 2
+initial_key_repeat = 25
+press_and_hold = false
+automatic_capitalization = false
+
+[bootstrap.macos.defaults.NSGlobalDomain]
+AppleShowAllExtensions = true
+NSNavPanelExpandedStateForSaveMode = true
+AppleKeyboardUIMode = 3 # full keyboard access in dialogs
+
+[bootstrap.macos.defaults."com.apple.finder"]
+FXDefaultSearchScope = "SCcf" # search the current folder
+
+[bootstrap.macos.defaults."com.apple.driver.AppleBluetoothMultitouch.trackpad"]
+Clicking = true # tap to click
+TrackpadTwoFingerFromRightEdgeSwipeGesture = 0 # no Notification Center swipe
+
+[bootstrap.macos.defaults."com.apple.dock"]
+wvous-br-corner = 1 # no bottom-right hot corner
+wvous-br-modifier = 0
+
+[bootstrap.macos.defaults."digital.twisted.noTunes"]
+replacement = "https://music.youtube.com/"
+
+# Disable the F11 "Show Desktop" shortcut
+[[bootstrap.macos.defaults_entries]]
+domain = "com.apple.symbolichotkeys"
+key = "AppleSymbolicHotKeys"
+path = ["36", "enabled"]
+value = false
+
+# ─── Setup the declarative parts do not cover (runs on every bootstrap) ──────
+[tasks.bootstrap]
+description = "Git identity, Screenshots folder, visible ~/Library"
+run = [
+  "git config -f ~/.gitconfig.local user.name '{{ vars.git_name }}'",
+  "[ -z '{{ vars.git_email }}' ] || git config -f ~/.gitconfig.local user.email '{{ vars.git_email }}'",
+  "git config -f ~/.gitconfig.local github.user '{{ vars.github_user }}'",
+  "git config -f ~/.gitconfig.local credential.helper osxkeychain",
+  "mkdir -p ~/Screenshots",
+  "defaults write com.apple.screencapture location ~/Screenshots",
+  "chflags nohidden ~/Library",
+]
+
+# ─── Packages (Homebrew formulae and casks, installed by mise) ───────────────
+[bootstrap.packages]
+# Apps
+"brew-cask:google-chrome@beta" = "latest" # Web browser
+"brew-cask:chatgpt" = "latest" # AI assistant
+"brew-cask:claude" = "latest"
+"brew-cask:protonvpn" = "latest" # VPN service
+"brew-cask:raycast" = "latest" # Productivity tool
+"brew-cask:microsoft-teams" = "latest" # Communication tool
+"brew-cask:zoom" = "latest" # Video conferencing
+"brew-cask:dbeaver-community" = "latest" # Database management tool
+"brew-cask:mongodb-compass" = "latest" # MongoDB GUI
+"brew-cask:jordanbaird-ice" = "latest" # Menu bar manager
+"brew-cask:discord" = "latest" # Chat app
+"brew-cask:omnissa-horizon-client" = "latest" # VDI client
+"brew-cask:notunes" = "latest" # Prevent iTunes from opening
+"brew-cask:ghostty" = "latest" # Terminal
+"brew-cask:localsend" = "latest" # Local file sharing
+"brew-cask:balenaetcher" = "latest" # Flash OS images
+"brew-cask:lm-studio" = "latest" # Run LLMs locally
+"brew-cask:rectangle" = "latest" # Window management
+"brew-cask:homerow" = "latest" # Keyboard-driven UI navigation
+"brew-cask:orbstack" = "latest" # Container and Linux VM runtime
+"brew-cask:session-manager-plugin" = "latest" # AWS Systems Manager sessions
+"brew-cask:openusage" = "latest" # AI usage limits in menu bar (API locale su :6736)
+"brew-cask:yaak" = "latest" # API client
+"brew-cask:visual-studio-code" = "latest" # Code editor
+"brew-cask:obsidian" = "latest" # Note-taking app
+"brew-cask:claude-code@latest" = "latest"
+
+# Fonts
+"brew-cask:font-fira-code" = "latest"
+"brew-cask:font-symbols-only-nerd-font" = "latest"
+"brew-cask:font-jetbrains-mono" = "latest"
+"brew-cask:font-recursive-code" = "latest"
+"brew-cask:font-monaspace" = "latest"
+
+# Command-line tools
+"brew:git" = "latest" # Version control
+"brew:gh" = "latest" # GitHub CLI
+"brew:fish" = "latest" # Friendly interactive shell
+"brew:fisher" = "latest" # Fish shell plugin manager
+"brew:starship" = "latest" # Shell prompt
+"brew:mise" = "latest" # Shell environment manager
+"brew:neovim" = "latest" # Text editor
+"brew:zoxide" = "latest" # Directory jumper
+"brew:bat" = "latest" # Cat clone with syntax highlighting
+"brew:eza" = "latest" # Modern ls
+"brew:fd" = "latest" # Find alternative
+"brew:ripgrep" = "latest" # Grep alternative
+"brew:jq" = "latest" # JSON processor
+"brew:fzf" = "latest" # Fuzzy finder
+"brew:zellij" = "latest" # Terminal multiplexer
+"brew:go" = "latest" # Go programming language
+"brew:docker" = "latest" # Container CLI
+"brew:vsce" = "latest" # Visual Studio Code extension manager
+"brew:kubernetes-cli" = "latest" # kubectl
+"brew:croc" = "latest" # Secure file transfer
+"brew-cask:vercel" = "latest" # Vercel CLI (moved from homebrew/core to a cask)
+"brew:firebase-cli" = "latest" # Firebase CLI
+"brew:yt-dlp" = "latest" # YouTube downloader
+"brew:ffmpeg" = "latest" # Multimedia framework
+"brew:luarocks" = "latest" # Lua package manager
+"brew:yazi" = "latest" # Filesystem manager
+"brew:sevenzip" = "latest" # 7zip
+"brew:poppler" = "latest" # PDF tools
+"brew:imagemagick" = "latest" # Image processing
+"brew:selene" = "latest" # Lua linter
+"brew:graphviz" = "latest" # Graph visualization
+"brew:nmap" = "latest" # Network scanner
+"brew:gemini-cli" = "latest" # Gemini CLI
+"brew:biome" = "latest"
+"brew:btop" = "latest"
+"brew:procs" = "latest" # Modern process viewer
+
+# HTTP / API testing
+"brew:xh" = "latest" # httpie più veloce, scritto in Rust
+"brew:hurl" = "latest" # test HTTP dichiarativi
+
+# JSON / data
+"brew:gron" = "latest" # rende JSON greppabile
+"brew:fx" = "latest" # JSON viewer interattivo
+"brew:miller" = "latest" # CSV/JSON/TSV processing
+
+# Git
+"brew:git-delta" = "latest" # diff viewer moderno
+"brew:lazygit" = "latest" # TUI git
+
+# Kubernetes / infra
+"brew:k9s" = "latest" # TUI per kubectl
+"brew:helm" = "latest" # package manager Kubernetes
+"brew:stern" = "latest" # tail logs da più pod
+"brew:kubectx" = "latest" # switch context/namespace
+
+# Dev utilities
+"brew:mkcert" = "latest" # certificati HTTPS locali
+"brew:oha" = "latest" # load testing HTTP
+"brew:hyperfine" = "latest" # benchmarking comandi shell
+"brew:viddy" = "latest" # watch moderno con diff
+"brew:topgrade" = "latest" # aggiorna package manager e toolchain
+"brew:atuin" = "latest" # shell history contestuale
+"brew:direnv" = "latest" # environment per-directory
+"brew:just" = "latest" # project command runner
+"brew:watchexec" = "latest" # rilancia comandi al cambiare dei file
+"brew:shellcheck" = "latest" # lint shell script
+"brew:shfmt" = "latest" # format shell script
+"brew:actionlint" = "latest" # lint GitHub Actions
+"brew:yq" = "latest" # YAML processor
+"brew:taplo" = "latest" # TOML formatter e language server
+"brew:lefthook" = "latest" # Git hooks veloci
+
+# AWS / Terraform / Kubernetes
+"brew:awscli" = "latest"
+"brew:terraform-docs" = "latest"
+"brew:kustomize" = "latest"
+"brew:kubeconform" = "latest"
+"brew:kind" = "latest"
+
+# Sicurezza
+"brew:trufflehog" = "latest" # scan segreti in git history
+"brew:trivy" = "latest" # vulnerability scanner container/filesystem
+"brew:sops" = "latest" # encrypted configuration files
+"brew:age" = "latest" # modern file encryption
+"brew:hadolint" = "latest" # Dockerfile lint
+"brew:cosign" = "latest" # sign and verify artifacts
+"brew:syft" = "latest" # generate SBOMs
+"brew:osv-scanner" = "latest" # dependency vulnerability scanner
+"brew:dive" = "latest" # inspect container image layers
+
+# Networking / observability
+"brew:grpcurl" = "latest"
+"brew:websocat" = "latest"
+"brew:lnav" = "latest"
+"brew:bandwhich" = "latest" # monitor traffico di rete per processo
+
+# Nerd utilities
+"brew:tokei" = "latest" # code statistics
+"brew:dust" = "latest" # disk usage
+"brew:duf" = "latest" # filesystem usage
+"brew:sd" = "latest" # search and replace
+"brew:hexyl" = "latest" # hex viewer
+"brew:glow" = "latest" # Markdown terminal viewer
+
+# Git signing
+"brew:gnupg" = "latest"
+"brew:pinentry-mac" = "latest"

@@ -171,7 +171,7 @@ runtime shells, and lazygit using the compact Ayu Mirage interface.
 
 ---
 
-## 📦 macOS Apps (Homebrew Cask)
+## 📦 macOS Apps (Homebrew casks via `mise bootstrap`)
 
 | App | Purpose |
 | :--- | :--- |

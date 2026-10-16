@@ -6,6 +6,10 @@ python = "3.14"
 uv = "latest"
 "npm:@zvec/zvec-grep" = "latest"
 maven = "latest"
+# Homebrew taps without API metadata need Ruby 3 to evaluate, so these come from mise
+"github:davidnussio/envsec" = "latest"
+supabase = "latest"
+tflint = "latest"
 
 [settings]
 verbose = false

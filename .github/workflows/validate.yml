@@ -14,19 +14,19 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install validators
-        run: brew install fish shellcheck starship taplo zellij
-
-      - name: Validate package manifest
-        run: brew bundle list --file=Brewfile
-
-      - name: Validate bootstrap and Fish
-        run: |
-          bash -n install.sh
-          shellcheck --severity=error install.sh
-          fish -n config/fish/config.fish config/fish/conf.d/*.fish config/fish/functions/*.fish
+        run: brew install fish mise starship taplo zellij
 
       - name: Validate TOML configuration
-        run: taplo check config/mise/config.toml config/starship.toml config/topgrade.toml
+        run: taplo check mise.toml config/mise/config.toml config/starship.toml config/topgrade.toml
+
+      - name: Validate bootstrap packages
+        # Resolves every formula and cask against Homebrew's API
+        run: |
+          mise trust mise.toml
+          mise bootstrap packages status
+
+      - name: Validate Fish
+        run: fish -n config/fish/config.fish config/fish/conf.d/*.fish config/fish/functions/*.fish
 
       - name: Validate Starship and Zellij
         run: |

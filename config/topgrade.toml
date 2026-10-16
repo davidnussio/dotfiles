@@ -8,6 +8,8 @@ disable = ["vim", "gcloud", "containers", "vscode", "pnpm", "yarn", "ruby_gems",
 
 [commands]
 "Mise tools update" = "mise upgrade"
+# Formulae and casks from [bootstrap.packages] in the dotfiles mise.toml
+"Mise bootstrap packages" = 'mise -C "$(dirname "$(readlink ~/.config/topgrade.toml)")/.." bootstrap packages upgrade --yes'
 "UV tools update" = "uv tool upgrade --all"
 
 [brew]

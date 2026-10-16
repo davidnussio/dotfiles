@@ -1,3 +1,15 @@
+# Homebrew prefix: `mise bootstrap` installs formulae and casks here, with or
+# without Homebrew itself, so put it on PATH before anything else runs.
+fish_add_path --global --move --path /opt/homebrew/bin /opt/homebrew/sbin
+
+# >>> mise:activate >>> managed by mise — do not edit between markers
+if status is-interactive
+    mise activate fish | source
+else
+    mise activate fish --shims | source
+end
+# <<< mise:activate <<<
+
 if status is-interactive
 
   function fish_greeting
@@ -12,13 +24,6 @@ if status is-interactive
   bind \e\[1\;3A prevd
   bind \e\[1\;4C nextd
 
-  # Add Homebrew to PATH on Apple Silicon and Intel Macs.
-  if test -x /opt/homebrew/bin/brew
-    /opt/homebrew/bin/brew shellenv | source
-  else if test -x /usr/local/bin/brew
-    /usr/local/bin/brew shellenv | source
-  end
-
   # Commands to run in interactive sessions can go here
   if type -q starship
     starship init fish | source
@@ -26,10 +31,6 @@ if status is-interactive
 
   if type -q zoxide
     zoxide init fish | source
-  end
-
-  if type -q mise
-    mise activate fish | source
   end
 
   # if type -q atuin
@@ -148,12 +149,9 @@ set -gx GPG_TTY (tty)
 
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
-if type -q brew
-    set -l brew_prefix (brew --prefix)
-    set -l conda_root "$brew_prefix/Caskroom/miniconda/base"
-    if test -x "$conda_root/bin/conda"
-        eval "$conda_root/bin/conda" "shell.fish" "hook" $argv | source
-    end
+set -l conda_root /opt/homebrew/Caskroom/miniconda/base
+if test -x "$conda_root/bin/conda"
+    eval "$conda_root/bin/conda" "shell.fish" "hook" $argv | source
 end
 # <<< conda initialize <<<
 
