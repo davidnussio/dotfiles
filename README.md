@@ -64,6 +64,7 @@ mise bootstrap packages prune --dry-run          # formulae no config declares
 dotfiles/
 ├── mise.toml                   # mise bootstrap: packages, dotfiles, macOS defaults, shell
 ├── macos/                      # Files copied into ~/Library
+├── bin/dothelp                 # Yazi-style browser for these docs (`dothelp`, Alt+/)
 ├── git/
 │   ├── .gitconfig              # Git config with delta, aliases, signing
 │   └── .gitignore_global       # Global gitignore
@@ -109,6 +110,13 @@ dotfiles/
 ## 📖 Cheatsheet
 
 See [`cheatsheet.md`](./cheatsheet.md) for all keybindings, aliases, and abbreviations.
+
+Or browse everything from the terminal with `dothelp` (or `Alt+/` at the fish
+prompt): a yazi-style three-column view of the cheatsheet, fish abbreviations,
+aliases and functions, packages, dotfile links and this README, read live from
+the repository. `j/k` move, `h/l` leave/enter, `/` filter, `s` search
+everywhere, `y` copy, `e` open the source in `$EDITOR`, `Enter` pick the command
+(copied, or inserted at the prompt with `Alt+/`), `?` help.
 
 ---
 

@@ -17,6 +17,7 @@
 | `Alt+←` / `Alt+↑` | Go to previous directory |
 | `Alt+→` | Go to next directory |
 | `...` | Expands to `../..` (and so on) |
+| `Alt+/` | Browse these docs with `dothelp`, insert the picked command |
 
 ---
 
@@ -35,6 +36,7 @@
 | `playground` | `cd ~/Developer/playground && code .` | Jump to playground |
 | `zdev` | Project layout or default Zellij | Open a workspace in the current directory |
 | `za <name>` | `zellij attach --create <name>` | Attach to or create a session |
+| `dothelp [query]` | `bin/dothelp` | Yazi-style browser for this cheatsheet, fish, packages and dotfiles |
 
 ### File System
 

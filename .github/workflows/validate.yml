@@ -28,6 +28,9 @@ jobs:
       - name: Validate Fish
         run: fish -n config/fish/config.fish config/fish/conf.d/*.fish config/fish/functions/*.fish
 
+      - name: Validate dothelp
+        run: python3 bin/dothelp --list >/dev/null
+
       - name: Validate Starship and Zellij
         run: |
           STARSHIP_CONFIG="$PWD/config/starship.toml" starship explain

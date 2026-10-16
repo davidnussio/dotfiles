@@ -1,0 +1,993 @@
+#!/usr/bin/env python3
+"""dothelp — browse this dotfiles repo in a yazi-style three-column TUI.
+
+Everything is read live from the repository, so the browser never drifts
+from the config:
+
+  Cheatsheet  sections and tables of cheatsheet.md
+  Fish        abbreviations, aliases and functions in config/fish
+  Packages    [bootstrap.packages] in mise.toml and [tools] in config/mise
+  Dotfiles    [dotfiles] links in mise.toml, with a preview of each source
+  Docs        sections of README.md
+
+Usage:
+  dothelp [QUERY]               open the browser (searching QUERY, if given)
+  dothelp --list                print every entry as plain text
+  dothelp --chooser-file FILE   write the command picked with Enter to FILE
+
+Keys: j/k move · h/l leave/enter · Enter pick · y yank · e edit source
+      / filter · s search everywhere · g/G top/bottom · ? help · q quit
+"""
+
+import curses
+import locale
+import os
+import re
+import shlex
+import subprocess
+import sys
+import textwrap
+import unicodedata
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+HOME = str(Path.home())
+
+USE_ICONS = os.environ.get("DOTHELP_ICONS", "1") != "0"
+ICONS = {
+    "dir": "",
+    "cheatsheet": "",
+    "fish": "",
+    "packages": "",
+    "dotfiles": "",
+    "docs": "",
+    "search": "",
+    "key": "",
+    "cmd": "",
+    "func": "",
+    "pkg": "",
+    "link": "",
+    "doc": "",
+    "item": "",
+}
+
+
+def icon(name):
+    return ICONS.get(name, ICONS["item"]) if USE_ICONS else ""
+
+
+def tilde(path):
+    path = str(path)
+    return "~" + path[len(HOME):] if path.startswith(HOME) else path
+
+
+def shell_path(path):
+    """A path to type at a fish prompt: ~ kept unquoted so it still expands."""
+    return re.sub(r"([ '\"()$&;|])", r"\\\1", tilde(path))
+
+
+# ─── Model ────────────────────────────────────────────────────────────────────
+
+
+class Node:
+    def __init__(self, name, kind="item", desc="", children=None, fields=None,
+                 cmd=None, source=None, preview=None, body=None):
+        self.name = name
+        self.kind = kind
+        self.desc = desc
+        self.children = children
+        self.fields = fields or []  # [(label, text)]
+        self.cmd = cmd  # inserted/copied on Enter
+        self.source = source  # (path, line) opened with `e`
+        self.preview = preview  # Path whose content is shown
+        self.body = body  # markdown lines shown in the preview
+        self.parent = None
+        self.cursor = 0
+        self.offset = 0
+
+    @property
+    def is_dir(self):
+        return self.children is not None
+
+    def add(self, child):
+        child.parent = self
+        self.children.append(child)
+        return child
+
+    def path(self):
+        node, parts = self, []
+        while node.parent is not None:
+            parts.append(node.name)
+            node = node.parent
+        return list(reversed(parts))
+
+    def walk(self):
+        for child in self.children or []:
+            yield child
+            if child.is_dir:
+                yield from child.walk()
+
+
+def folder(name, kind="dir", desc=""):
+    return Node(name, kind=kind, desc=desc, children=[])
+
+
+# ─── Markdown helpers ─────────────────────────────────────────────────────────
+
+LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+CODE_RE = re.compile(r"`([^`]+)`")
+
+
+def plain(text):
+    """Markdown cell → display text (links unwrapped, emphasis dropped)."""
+    text = LINK_RE.sub(r"\1", text)
+    text = text.replace("**", "").replace("\\|", "|")
+    return text.strip()
+
+
+def no_code(text):
+    return plain(text).replace("`", "")
+
+
+def heading(text):
+    """Drop leading emoji and symbols: '## ⌨️ Shell Keybindings' → 'Shell Keybindings'."""
+    text = text.lstrip("#").strip()
+    while text and not (text[0].isalnum() or text[0] in "`(."):
+        text = text[1:]
+    return no_code(text)
+
+
+def split_row(line):
+    cells = re.split(r"(?<!\\)\|", line.strip().strip("|"))
+    return [c.strip() for c in cells]
+
+
+def first_code(text):
+    match = CODE_RE.search(text)
+    return match.group(1) if match else None
+
+
+def looks_like_keys(text):
+    return bool(re.match(r"^(Ctrl|Alt|Cmd|Shift|Super|Tab|Esc|F\d)\b", text or ""))
+
+
+def table_cmd(headers, cells):
+    """The command a cheatsheet row offers, if any."""
+    lowered = [h.lower() for h in headers]
+    if lowered and lowered[0] in ("keybinding", "app"):
+        return None
+    for i, h in enumerate(lowered):
+        if "usage" in h and i < len(cells):
+            cmd = first_code(cells[i])
+            return None if looks_like_keys(cmd) or (cmd or "").startswith("auto") else cmd
+    if lowered and lowered[0] in ("tool",):
+        return None
+    cmd = first_code(cells[0]) if cells else None
+    return None if looks_like_keys(cmd) else cmd
+
+
+# ─── Sources ──────────────────────────────────────────────────────────────────
+
+
+def load_cheatsheet(path):
+    root = folder("Cheatsheet", "cheatsheet", "keybindings, aliases, tools")
+    if not path.exists():
+        return root
+    lines = path.read_text().splitlines()
+    section = sub = None
+    headers = None
+    for no, line in enumerate(lines, 1):
+        if line.startswith("## "):
+            section = root.add(folder(heading(line)))
+            sub, headers = None, None
+        elif line.startswith("### ") and section is not None:
+            sub = section.add(folder(heading(line)))
+            headers = None
+        elif section is None:
+            continue
+        elif line.startswith("|"):
+            cells = split_row(line)
+            if headers is None:
+                headers = [no_code(c) for c in cells]
+            elif all(re.fullmatch(r":?-{2,}:?", c) for c in cells if c):
+                continue
+            else:
+                target = sub or section
+                fields = [(headers[i] if i < len(headers) else "", plain(c))
+                          for i, c in enumerate(cells) if c]
+                name = no_code(cells[0])
+                desc = no_code(cells[-1]) if len(cells) > 1 else ""
+                kind = "key" if headers and headers[0].lower() == "keybinding" else "item"
+                links = [u for _, u in LINK_RE.findall(line)]
+                if links:
+                    fields.append(("Link", links[0]))
+                target.add(Node(name, kind=kind, desc=desc, fields=fields,
+                                cmd=table_cmd(headers, cells), source=(path, no)))
+        elif re.match(r"^\s*[-*] ", line):
+            target = sub or section
+            text = plain(line.strip()[2:])
+            name, _, desc = text.partition(" — ")
+            target.add(Node(name.strip(), desc=desc.strip(),
+                            fields=[("", text)], source=(path, no)))
+        elif line.strip() and not line.startswith(("---", ">")) and headers is None:
+            # Prose under a heading becomes the folder's description
+            target = sub or section
+            target.desc = (target.desc + " " + plain(line)).strip()
+        if not line.startswith("|"):
+            headers = None if not line.strip() or line.startswith("#") else headers
+    return root
+
+
+ABBR_OPTS_WITH_ARG = {"--position", "-p", "--set-cursor", "--regex", "-r", "--function", "-f", "--command"}
+
+
+def fish_words(rest):
+    try:
+        return shlex.split(rest, comments=True)
+    except ValueError:
+        return rest.split()
+
+
+def parse_abbr(rest):
+    words, out, skip = fish_words(rest), [], False
+    for w in words:
+        if skip:
+            skip = False
+        elif w.startswith("-") and (not out or w.split("=")[0] in ABBR_OPTS_WITH_ARG):
+            # abbr's own flags; once the name is known, other dashes belong to the expansion
+            skip = w.split("=")[0] in ABBR_OPTS_WITH_ARG and "=" not in w
+        else:
+            out.append(w)
+    if not out:
+        return None
+    return out[0], " ".join(out[1:])
+
+
+def parse_alias(rest):
+    words = fish_words(rest)
+    if not words:
+        return None
+    if "=" in words[0]:
+        name, _, value = words[0].partition("=")
+        return name, " ".join([value] + words[1:])
+    return words[0], " ".join(words[1:])
+
+
+DESC_RE = re.compile(r"""(?:--description|-d)[ =](?:'((?:\\.|[^'])*)'|"((?:\\.|[^"])*)"|(\S+))""")
+
+
+def parse_function(rest):
+    name = rest.split()[0] if rest.split() else ""
+    # Plugin internals and fish's own hooks are not worth browsing
+    if not name or name.startswith("_") or name.startswith("fish_") or name.endswith("_key_bindings"):
+        return None
+    m = DESC_RE.search(rest)  # fish allows \' inside single quotes, which shlex rejects
+    desc = re.sub(r"\\(.)", r"\1", next(g for g in m.groups() if g is not None)) if m else ""
+    return name, desc
+
+
+def fish_files(base):
+    files = [base / "config.fish"]
+    files += sorted((base / "conf.d").glob("*.fish"))
+    files += sorted((base / "functions").glob("*.fish"))
+    return [f for f in files if f.exists()]
+
+
+def load_fish(base):
+    root = folder("Fish", "fish", "abbreviations, aliases, functions")
+    abbrs = root.add(folder("Abbreviations", desc="type it, then space to expand"))
+    aliases = root.add(folder("Aliases"))
+    funcs = root.add(folder("Functions"))
+    seen = set()
+    for f in fish_files(base):
+        if f.name.startswith("_"):
+            continue
+        lines = f.read_text(errors="replace").splitlines()
+        for no, line in enumerate(lines, 1):
+            m = re.match(r"^\s*(abbr|alias|function)\s+(.*)$", line)
+            if not m:
+                continue
+            what, rest = m.groups()
+            where = (f, no)
+            rel = tilde(f)
+            if what == "abbr":
+                parsed = parse_abbr(rest)
+                if parsed and ("abbr", parsed[0]) not in seen:
+                    seen.add(("abbr", parsed[0]))
+                    name, exp = parsed
+                    abbrs.add(Node(name, kind="cmd", desc=exp, cmd=name, source=where,
+                                   fields=[("Abbreviation", f"`{name}`"), ("Expands to", f"`{exp}`"),
+                                           ("Defined in", f"{rel}:{no}")]))
+            elif what == "alias":
+                parsed = parse_alias(rest)
+                if parsed and ("alias", parsed[0]) not in seen:
+                    seen.add(("alias", parsed[0]))
+                    name, value = parsed
+                    aliases.add(Node(name, kind="cmd", desc=value, cmd=name, source=where,
+                                     fields=[("Alias", f"`{name}`"), ("Runs", f"`{value}`"),
+                                             ("Defined in", f"{rel}:{no}")]))
+            else:
+                parsed = parse_function(rest)
+                if parsed and ("func", parsed[0]) not in seen:
+                    seen.add(("func", parsed[0]))
+                    name, desc = parsed
+                    above = lines[no - 2].strip().lstrip("#").strip() if no > 1 else ""
+                    one_liner = no + 1 < len(lines) and lines[no + 1].strip() == "end"
+                    if not desc and lines[no - 2:no - 1] and lines[no - 2].strip().startswith("# ") \
+                            and len(above.split()) > 1:
+                        desc = above  # the comment right above (one word is a group header)
+                    elif not desc and one_liner:
+                        desc = lines[no].strip()  # show what it runs
+                    funcs.add(Node(name, kind="func", desc=desc, cmd=name, source=where,
+                                   preview=f, fields=[("Function", f"`{name}`"),
+                                                      ("Description", desc or "—"),
+                                                      ("Defined in", f"{rel}:{no}")]))
+    for group in (abbrs, aliases, funcs):
+        group.children.sort(key=lambda n: n.name.lower())
+    return root
+
+
+def toml_sections(path):
+    """Yield (section, lineno, line) for a simple TOML file, without a TOML parser."""
+    section = None
+    for no, line in enumerate(path.read_text().splitlines(), 1):
+        m = re.match(r"^\s*\[+([^\]]+)\]+\s*(#.*)?$", line)
+        if m:
+            section = m.group(1).strip()
+            continue
+        yield section, no, line
+
+
+KEY_RE = re.compile(r'^\s*"?([^"=]+?)"?\s*=\s*(.+?)\s*(?:#\s*(.*))?$')
+
+
+def load_packages(bootstrap, tools_file):
+    root = folder("Packages", "packages", "Homebrew formulae, casks and mise tools")
+    group = None
+    if bootstrap.exists():
+        for section, no, line in toml_sections(bootstrap):
+            if section != "bootstrap.packages":
+                continue
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                group = root.add(folder(stripped.lstrip("# ").strip()))
+                continue
+            m = KEY_RE.match(line)
+            if not m:
+                continue
+            key, value, comment = m.groups()
+            manager, _, name = key.partition(":")
+            group = group or root.add(folder("Other"))
+            kind = "cask" if manager == "brew-cask" else "formula"
+            url = f"https://formulae.brew.sh/{kind}/{name}" if "/" not in name else None
+            fields = [("Package", f"`{name}`"), ("Manager", manager), ("Version", value.strip('"')),
+                      ("About", comment or "—"), ("Declared in", f"{tilde(bootstrap)}:{no}")]
+            if url:
+                fields.append(("Homebrew", url))
+            group.add(Node(name, kind="pkg", desc=comment or manager, source=(bootstrap, no),
+                           cmd=f"mise bootstrap packages use {key}", fields=fields))
+    if tools_file.exists():
+        tools = root.add(folder("mise tools", desc="runtimes from config/mise/config.toml"))
+        for section, no, line in toml_sections(tools_file):
+            m = KEY_RE.match(line) if section == "tools" else None
+            if m:
+                key, value, comment = m.groups()
+                tools.add(Node(key, kind="pkg", desc=value.strip('"'), source=(tools_file, no),
+                               cmd=f"mise use -g {key}@{value.strip(chr(34))}",
+                               fields=[("Tool", f"`{key}`"), ("Version", value.strip('"')),
+                                       ("Declared in", f"{tilde(tools_file)}:{no}")]))
+    return root
+
+
+def load_dotfiles(bootstrap):
+    root = folder("Dotfiles", "dotfiles", "what mise links into $HOME")
+    if not bootstrap.exists():
+        return root
+    for section, no, line in toml_sections(bootstrap):
+        if section != "dotfiles":
+            continue
+        m = KEY_RE.match(line)
+        if not m or line.strip().startswith("#"):
+            continue
+        target, value, _ = m.groups()
+        mode = "symlink"
+        if value.startswith("{"):
+            src = re.search(r'source\s*=\s*"([^"]+)"', value)
+            md = re.search(r'mode\s*=\s*"([^"]+)"', value)
+            value = src.group(1) if src else ""
+            mode = md.group(1) if md else mode
+        source = REPO / value.strip('"')
+        root.add(Node(target, kind="link", desc=f"{mode} ← {value.strip(chr(34))}",
+                      source=(bootstrap, no), preview=source, cmd=f"$EDITOR {shell_path(source)}",
+                      fields=[("Target", target), ("Source", tilde(source)), ("Mode", mode)]))
+    return root
+
+
+def load_docs(readme):
+    root = folder("Docs", "docs", "README sections")
+    if not readme.exists():
+        return root
+    current = None
+    for no, line in enumerate(readme.read_text().splitlines(), 1):
+        if line.startswith("## "):
+            current = root.add(Node(heading(line), kind="doc", body=[], source=(readme, no)))
+        elif current is not None:
+            current.body.append(line)
+    for node in root.children:
+        fence, text = False, []
+        for l in node.body:
+            if l.startswith("```"):
+                fence = not fence
+            elif not fence and l.strip() and not l.startswith(("---", "|", "#")):
+                text.append(l)
+        node.desc = no_code(text[0]) if text else ""
+    return root
+
+
+def build_tree():
+    root = folder("dothelp")
+    root.add(load_cheatsheet(REPO / "cheatsheet.md"))
+    root.add(load_fish(REPO / "config" / "fish"))
+    root.add(load_packages(REPO / "mise.toml", REPO / "config" / "mise" / "config.toml"))
+    root.add(load_dotfiles(REPO / "mise.toml"))
+    root.add(load_docs(REPO / "README.md"))
+    return root
+
+
+def search(root, query):
+    q = query.lower()
+    hits = []
+    for node in root.walk():
+        if node.is_dir:
+            continue
+        name, desc = node.name.lower(), node.desc.lower()
+        extra = " ".join(t for _, t in node.fields).lower()
+        if q in name:
+            score = 0 if name == q else 1 if name.startswith(q) else 2
+        elif q in desc:
+            score = 3
+        elif q in extra:
+            score = 4
+        else:
+            continue
+        hits.append((score, node))
+    hits.sort(key=lambda h: (h[0], h[1].name.lower()))
+    result = Node(f"search: {query}", kind="search", children=[])
+    for _, node in hits:
+        result.children.append(node)  # keep each hit's real parent
+    return result
+
+
+# ─── Text width ───────────────────────────────────────────────────────────────
+
+
+def char_width(ch):
+    if unicodedata.combining(ch) or ch in "‍️︎":
+        return 0
+    return 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+
+
+def text_width(text):
+    return sum(char_width(c) for c in text)
+
+
+def fit(text, width):
+    if width <= 0:
+        return ""
+    if text_width(text) <= width:
+        return text
+    out, used = [], 0
+    for ch in text:
+        w = char_width(ch)
+        if used + w > width - 1:
+            break
+        out.append(ch)
+        used += w
+    return "".join(out) + "…"
+
+
+# ─── UI ───────────────────────────────────────────────────────────────────────
+
+HELP = [
+    ("j / k  ↓ / ↑", "move"),
+    ("h / l  ← / →", "leave / enter a folder"),
+    ("Enter", "enter a folder, or pick the entry's command"),
+    ("y", "copy the entry's command to the clipboard"),
+    ("e", "open the source file in $EDITOR"),
+    ("/", "filter the current folder"),
+    ("s", "search every entry"),
+    ("g / G", "first / last entry"),
+    ("Ctrl-d / Ctrl-u", "half page down / up"),
+    ("Esc", "clear the filter, or leave search"),
+    ("?", "this help"),
+    ("q", "quit"),
+]
+
+
+class App:
+    def __init__(self, scr, root, query=None, chooser=None):
+        self.scr = scr
+        self.root = root
+        self.cwd = root
+        self.chooser = chooser
+        self.filter = ""
+        self.message = ""
+        self.show_help = False
+        self.file_cache = {}
+        self.init_colors()
+        if query:
+            self.open_search(query)
+
+    # colors
+    def init_colors(self):
+        curses.curs_set(0)
+        try:
+            curses.start_color()
+            curses.use_default_colors()
+        except curses.error:
+            pass
+        pairs = {
+            "accent": (curses.COLOR_BLUE, -1),
+            "code": (curses.COLOR_YELLOW, -1),
+            "label": (curses.COLOR_GREEN, -1),
+            "crumb": (curses.COLOR_MAGENTA, -1),
+            "sel": (curses.COLOR_BLACK, curses.COLOR_BLUE),
+            "sel_dim": (curses.COLOR_BLACK, curses.COLOR_WHITE),
+            "cyan": (curses.COLOR_CYAN, -1),
+        }
+        self.c = {}
+        for i, (name, (fg, bg)) in enumerate(pairs.items(), 1):
+            try:
+                curses.init_pair(i, fg, bg)
+                self.c[name] = curses.color_pair(i)
+            except curses.error:
+                self.c[name] = curses.A_NORMAL
+        self.c["dim"] = curses.A_DIM
+
+    # helpers
+    def put(self, y, x, text, attr=0, width=None):
+        h, w = self.scr.getmaxyx()
+        if y < 0 or y >= h or x >= w:
+            return
+        width = min(width if width is not None else w - x, w - x)
+        if y == h - 1:
+            width = min(width, w - x - 1)  # bottom-right cell raises in curses
+        try:
+            self.scr.addstr(y, x, fit(text, width), attr)
+        except curses.error:
+            pass
+
+    def rich(self, y, x, text, width, attr=0, in_code=False):
+        """Draw text where `backtick` spans are highlighted; returns the code state."""
+        col, code = 0, in_code
+        for i, part in enumerate(text.split("`")):
+            if i:
+                code = not code
+            if part and col < width:
+                self.put(y, x + col, part, self.c["code"] if code else attr, width - col)
+                col += text_width(part)
+        return code
+
+    def visible(self, node):
+        kids = node.children or []
+        if node is self.cwd and self.filter:
+            q = self.filter.lower()
+            kids = [k for k in kids if q in k.name.lower() or q in k.desc.lower()]
+        return kids
+
+    def current(self):
+        kids = self.visible(self.cwd)
+        if not kids:
+            return None
+        self.cwd.cursor = max(0, min(self.cwd.cursor, len(kids) - 1))
+        return kids[self.cwd.cursor]
+
+    def node_icon(self, node):
+        if node.is_dir:
+            return icon(node.kind if node.kind in ICONS else "dir")
+        return icon(node.kind)
+
+    # drawing
+    def draw(self):
+        self.scr.erase()
+        h, w = self.scr.getmaxyx()
+        if h < 6 or w < 40:
+            self.put(0, 0, "dothelp: terminal too small")
+            self.scr.refresh()
+            return
+        body_h = h - 2
+        left_w = max(14, w // 7)
+        mid_w = max(24, (w - left_w) * 3 // 7)
+        right_x = left_w + mid_w + 2
+        right_w = w - right_x
+
+        self.draw_header(w)
+        parent = self.cwd.parent if self.cwd.kind != "search" else None
+        if parent is not None:
+            self.draw_list(parent, 1, 0, left_w, body_h, active=False)
+        self.draw_list(self.cwd, 1, left_w + 1, mid_w, body_h, active=True)
+        for y in range(1, body_h + 1):
+            self.put(y, right_x - 1, "│", self.c["dim"], 1)
+        sel = self.current()
+        if sel is not None:
+            self.draw_preview(sel, 1, right_x + 1, right_w - 1, body_h)
+        self.draw_footer(h, w)
+        if self.show_help:
+            self.draw_help(h, w)
+        self.scr.refresh()
+
+    def draw_header(self, w):
+        crumbs = self.cwd.path() if self.cwd.kind != "search" else [self.cwd.name]
+        sel = self.current()
+        x = 1
+        self.put(0, x, "dothelp", self.c["accent"] | curses.A_BOLD)
+        x += 7
+        for part in crumbs + ([sel.name] if sel is not None else []):
+            self.put(0, x, "  ›  ", self.c["dim"])
+            x += 5
+            last = sel is not None and part == sel.name
+            self.put(0, x, part, self.c["crumb"] | (curses.A_BOLD if not last else 0))
+            x += text_width(part)
+            if x >= w:
+                break
+
+    def draw_list(self, node, y0, x0, width, height, active):
+        kids = self.visible(node) if active else (node.children or [])
+        if not kids:
+            if active:
+                self.put(y0, x0 + 1, "no matches" if self.filter else "empty", self.c["dim"])
+            return
+        cursor = node.cursor if active else (node.children.index(self.cwd)
+                                             if self.cwd in node.children else 0)
+        cursor = max(0, min(cursor, len(kids) - 1))
+        offset = node.offset
+        if cursor < offset:
+            offset = cursor
+        elif cursor >= offset + height:
+            offset = cursor - height + 1
+        node.offset = offset
+        for row, kid in enumerate(kids[offset:offset + height]):
+            y = y0 + row
+            selected = offset + row == cursor
+            ic = self.node_icon(kid)
+            label = f" {ic} {kid.name}" if ic else f" {kid.name}"
+            if selected:
+                attr = self.c["sel"] if active else self.c["sel_dim"]
+                self.put(y, x0, " " * width, attr, width)
+                self.put(y, x0, label, attr | curses.A_BOLD, width)
+            else:
+                attr = (self.c["accent"] | curses.A_BOLD) if kid.is_dir else 0
+                self.put(y, x0, label, attr, width)
+            if active and kid.desc:
+                used = text_width(label) + 2
+                if used < width - 6:
+                    desc_attr = attr if selected else self.c["dim"]
+                    self.put(y, x0 + used, no_code(kid.desc), desc_attr, width - used - 1)
+        if active and len(kids) > height:
+            pos = f" {cursor + 1}/{len(kids)} "
+            self.put(y0 + height - 1, x0 + width - len(pos), pos, self.c["dim"])
+
+    def wrap(self, text, width):
+        return textwrap.wrap(text, max(10, width), break_on_hyphens=False) or [""]
+
+    def draw_preview(self, node, y0, x0, width, height):
+        y = y0
+        bottom = y0 + height
+
+        def line(text, attr=0, rich=False):
+            nonlocal y
+            if y >= bottom:
+                return
+            if rich:
+                self.rich(y, x0, text, width, attr)
+            else:
+                self.put(y, x0, text, attr, width)
+            y += 1
+
+        if node.is_dir:
+            if node.desc:
+                for part in self.wrap(no_code(node.desc), width):
+                    line(part, self.c["dim"])
+                line("")
+            for kid in node.children:
+                ic = self.node_icon(kid)
+                text = f"{ic} {kid.name}" if ic else kid.name
+                line(text, (self.c["accent"] | curses.A_BOLD) if kid.is_dir else 0)
+            if not node.children:
+                line("empty", self.c["dim"])
+            return
+
+        line(node.name, self.c["accent"] | curses.A_BOLD)
+        line("")
+        if node.body is not None:
+            self.draw_markdown(node.body, x0, y, width, bottom)
+            return
+        label_w = min(14, max((text_width(l) for l, _ in node.fields), default=0) + 2)
+        for label, text in node.fields:
+            parts = self.wrap(text, width - label_w)
+            in_code = False
+            for i, part in enumerate(parts):
+                if y >= bottom:
+                    break
+                if i == 0 and label:
+                    self.put(y, x0, label, self.c["label"], label_w)
+                in_code = self.rich(y, x0 + label_w, part, width - label_w, 0, in_code)
+                y += 1
+        if node.cmd:
+            line("")
+            self.put(y, x0, "Enter", self.c["label"], label_w)
+            self.rich(y, x0 + label_w, f"`{node.cmd}`", width - label_w)
+            y += 1
+        if node.preview is not None and y < bottom - 2:
+            line("")
+            self.draw_file(node.preview, x0, y, width, bottom,
+                           start=node.source[1] if node.kind == "func" else 1)
+
+    def draw_markdown(self, body, x0, y, width, bottom):
+        fence = False
+        for raw in body:
+            if y >= bottom:
+                break
+            if raw.startswith("```"):
+                fence = not fence
+                continue
+            if fence:
+                self.put(y, x0 + 2, raw, self.c["code"], width - 2)
+                y += 1
+                continue
+            if raw.startswith("#"):
+                self.put(y, x0, heading(raw), self.c["crumb"] | curses.A_BOLD, width)
+                y += 1
+                continue
+            if raw.startswith("---"):
+                continue
+            text = plain(raw)
+            if not text:
+                y += 1
+                continue
+            indent = len(text) - len(text.lstrip())
+            in_code = False
+            for part in self.wrap(text.strip(), width - indent):
+                if y >= bottom:
+                    break
+                in_code = self.rich(y, x0 + indent, part, width - indent, 0, in_code)
+                y += 1
+
+    def file_lines(self, path):
+        if path not in self.file_cache:
+            try:
+                if path.is_dir():
+                    entries = sorted(path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
+                    lines = [p.name + ("/" if p.is_dir() else "") for p in entries]
+                else:
+                    data = path.read_bytes()[:200_000]
+                    lines = (["(binary file)"] if b"\0" in data[:4096]
+                             else data.decode("utf-8", "replace").splitlines())
+            except OSError as err:
+                lines = [f"({err.strerror})"]
+            self.file_cache[path] = lines
+        return self.file_cache[path]
+
+    def draw_file(self, path, x0, y, width, bottom, start=1):
+        self.put(y, x0, tilde(path) + ("/" if path.is_dir() else ""), self.c["cyan"], width)
+        y += 1
+        lines = self.file_lines(path)
+        if path.is_dir():
+            for name in lines:
+                if y >= bottom:
+                    return
+                self.put(y, x0, name, (self.c["accent"] | curses.A_BOLD) if name.endswith("/") else 0, width)
+                y += 1
+            return
+        num_w = len(str(len(lines))) + 1
+        for no in range(start, len(lines) + 1):
+            if y >= bottom:
+                return
+            self.put(y, x0, str(no).rjust(num_w - 1), self.c["dim"], num_w)
+            self.put(y, x0 + num_w + 1, lines[no - 1].replace("\t", "    "), 0, width - num_w - 1)
+            y += 1
+
+    def draw_footer(self, h, w):
+        y = h - 1
+        if self.message:
+            self.put(y, 1, self.message, self.c["label"])
+            return
+        if self.filter:
+            self.put(y, 1, f"filter: {self.filter}", self.c["code"])
+            return
+        hint = "h/l move · Enter pick · y yank · e edit · / filter · s search · ? help · q quit"
+        self.put(y, 1, hint, self.c["dim"])
+
+    def draw_help(self, h, w):
+        box_w = min(w, max(len(k) + len(v) for k, v in HELP) + 26)
+        box_h = len(HELP) + 4
+        y0, x0 = max(0, (h - box_h) // 2), max(0, (w - box_w) // 2)
+        for row in range(box_h):
+            self.put(y0 + row, x0, " " * box_w, self.c["sel_dim"], box_w)
+        self.put(y0 + 1, x0 + 2, "dothelp keys", self.c["sel_dim"] | curses.A_BOLD)
+        for i, (keys, what) in enumerate(HELP):
+            self.put(y0 + 3 + i, x0 + 2, keys.ljust(18) + what, self.c["sel_dim"], box_w - 4)
+
+    # actions
+    def prompt(self, label):
+        """Read a line at the bottom row; returns None on Esc."""
+        h, w = self.scr.getmaxyx()
+        text = ""
+        curses.curs_set(1)
+        try:
+            while True:
+                self.put(h - 1, 0, " " * (w - 1))
+                self.put(h - 1, 1, f"{label}{text}", self.c["code"])
+                self.scr.move(h - 1, min(w - 2, 1 + text_width(label + text)))
+                ch = self.scr.get_wch()
+                if ch in ("\n", "\r", curses.KEY_ENTER):
+                    return text
+                if ch == "\x1b":
+                    return None
+                if ch in ("\x7f", "\b", curses.KEY_BACKSPACE):
+                    text = text[:-1]
+                elif isinstance(ch, str) and ch.isprintable():
+                    text += ch
+                if label.startswith("filter"):
+                    self.filter = text
+                    self.cwd.cursor = 0
+                    self.draw()
+        finally:
+            curses.curs_set(0)
+
+    def open_search(self, query):
+        result = search(self.root, query)
+        result.parent = self.cwd if self.cwd.kind != "search" else self.cwd.parent
+        self.cwd = result
+        self.filter = ""
+        if not result.children:
+            self.message = f"no entries match “{query}”"
+
+    def enter(self):
+        sel = self.current()
+        if sel is not None and sel.is_dir:
+            self.cwd = sel
+            self.filter = ""
+
+    def leave(self):
+        if self.filter:
+            self.filter = ""
+            return
+        if self.cwd.parent is None:
+            return
+        child = self.cwd
+        self.cwd = self.cwd.parent
+        if self.cwd.children and child in self.cwd.children:
+            self.cwd.cursor = self.cwd.children.index(child)
+
+    def yank(self, sel):
+        if not sel.cmd:
+            self.message = "nothing to copy here"
+            return
+        try:
+            subprocess.run(["pbcopy"], input=sel.cmd.encode(), check=True)
+            self.message = f"copied: {sel.cmd}"
+        except (OSError, subprocess.CalledProcessError):
+            self.message = "pbcopy is not available"
+
+    def edit(self, sel):
+        if sel.source is None:
+            self.message = "no source file for this entry"
+            return
+        path, line = sel.source
+        editor = shlex.split(os.environ.get("EDITOR") or "nvim")
+        curses.endwin()
+        try:
+            subprocess.run(editor + [f"+{line}", str(path)])
+        except OSError:
+            self.message = f"cannot run {editor[0]}"
+        self.scr.refresh()
+
+    def run(self):
+        while True:
+            self.draw()
+            ch = self.scr.get_wch()
+            self.message = ""
+            if self.show_help:
+                self.show_help = False
+                continue
+            kids = self.visible(self.cwd)
+            sel = self.current()
+            page = max(1, (self.scr.getmaxyx()[0] - 2) // 2)
+            if ch in ("q", "Q"):
+                return None
+            if ch in ("j", curses.KEY_DOWN):
+                self.cwd.cursor = min(len(kids) - 1, self.cwd.cursor + 1)
+            elif ch in ("k", curses.KEY_UP):
+                self.cwd.cursor = max(0, self.cwd.cursor - 1)
+            elif ch in ("\x04", curses.KEY_NPAGE):
+                self.cwd.cursor = min(len(kids) - 1, self.cwd.cursor + page)
+            elif ch in ("\x15", curses.KEY_PPAGE):
+                self.cwd.cursor = max(0, self.cwd.cursor - page)
+            elif ch in ("g", curses.KEY_HOME):
+                self.cwd.cursor = 0
+            elif ch in ("G", curses.KEY_END):
+                self.cwd.cursor = max(0, len(kids) - 1)
+            elif ch in ("l", curses.KEY_RIGHT):
+                self.enter()
+            elif ch in ("h", curses.KEY_LEFT, "\x1b"):
+                self.leave()
+            elif ch in ("\n", "\r", curses.KEY_ENTER):
+                if sel is None:
+                    continue
+                if sel.is_dir:
+                    self.enter()
+                elif sel.cmd:
+                    return sel.cmd
+                else:
+                    self.message = "nothing to pick here — try y or e"
+            elif ch == "y" and sel is not None:
+                self.yank(sel)
+            elif ch == "e" and sel is not None:
+                self.edit(sel)
+            elif ch == "/":
+                before = self.filter
+                text = self.prompt("filter: ")
+                self.filter = before if text is None else text
+                self.cwd.cursor = 0
+            elif ch == "s":
+                text = self.prompt("search: ")
+                if text:
+                    self.open_search(text)
+            elif ch == "?":
+                self.show_help = True
+            elif ch == curses.KEY_RESIZE:
+                curses.update_lines_cols()
+
+
+def print_tree(node, depth=0):
+    for kid in node.children or []:
+        desc = f"  — {no_code(kid.desc)}" if kid.desc else ""
+        print("  " * depth + kid.name + ("/" if kid.is_dir else "") + desc)
+        if kid.is_dir:
+            print_tree(kid, depth + 1)
+
+
+def main(argv):
+    args = list(argv)
+    if args and args[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 0
+    root = build_tree()
+    if "--list" in args:
+        print_tree(root)
+        return 0
+    chooser = None
+    if "--chooser-file" in args:
+        i = args.index("--chooser-file")
+        if i + 1 >= len(args):
+            print("dothelp: --chooser-file needs a path", file=sys.stderr)
+            return 2
+        chooser = args[i + 1]
+        del args[i:i + 2]
+    query = " ".join(args) or None
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        print_tree(search(root, query) if query else root)
+        return 0
+
+    locale.setlocale(locale.LC_ALL, "")
+    os.environ.setdefault("ESCDELAY", "25")
+    try:
+        picked = curses.wrapper(lambda scr: App(scr, root, query, chooser).run())
+    except KeyboardInterrupt:
+        return 130
+    if picked is None:
+        return 0
+    if chooser:
+        Path(chooser).write_text(picked)
+    else:
+        try:
+            subprocess.run(["pbcopy"], input=picked.encode(), check=True)
+            print(f"copied: {picked}")
+        except (OSError, subprocess.CalledProcessError):
+            print(picked)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
