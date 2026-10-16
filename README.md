@@ -64,6 +64,7 @@ mise bootstrap packages prune --dry-run          # formulae no config declares
 dotfiles/
 ├── mise.toml                   # mise bootstrap: packages, dotfiles, macOS defaults, shell
 ├── macos/                      # Files copied into ~/Library
+├── supply-chain/               # 1-day release cooldown merged into bun and uv configs
 ├── bin/dothelp                 # Yazi-style browser for these docs (`dothelp`, Alt+/)
 ├── git/
 │   ├── .gitconfig              # Git config with delta, aliases, signing

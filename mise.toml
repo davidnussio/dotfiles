@@ -35,6 +35,13 @@ prompt = "GitHub user"
 # Home/End move to line start/end in Cocoa text fields
 "~/Library/KeyBindings/DefaultKeyBinding.dict" = { source = "macos/DefaultKeyBinding.dict", mode = "copy" }
 
+# Package-manager cooldowns: skip releases younger than a day, when a
+# compromised version is usually still unnoticed. Only these keys are managed;
+# ~/.npmrc also holds registry tokens, so it gets a single line.
+"~/.npmrc/min-release-age" = { line = "min-release-age=1" }
+"~/.bunfig.toml/cooldown" = { source = "supply-chain/bunfig.toml", merge = true }
+"~/.config/uv/uv.toml/cooldown" = { source = "supply-chain/uv.toml", merge = true }
+
 # ─── Shell ───────────────────────────────────────────────────────────────────
 # The activation block already lives in config/fish/config.fish
 [bootstrap.mise_shell_activate]
