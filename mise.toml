@@ -246,3 +246,4 @@ run = [
 # Git signing
 "brew:gnupg" = "latest"
 "brew:pinentry-mac" = "latest"
+"brew:opencode" = "latest"
