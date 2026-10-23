@@ -170,7 +170,6 @@ run = [
 "brew:selene" = "latest" # Lua linter
 "brew:graphviz" = "latest" # Graph visualization
 "brew:nmap" = "latest" # Network scanner
-"brew:gemini-cli" = "latest" # Gemini CLI
 "brew:biome" = "latest"
 "brew:btop" = "latest"
 "brew:procs" = "latest" # Modern process viewer
