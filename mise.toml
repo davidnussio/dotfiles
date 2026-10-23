@@ -247,3 +247,4 @@ run = [
 "brew:gnupg" = "latest"
 "brew:pinentry-mac" = "latest"
 "brew:opencode" = "latest"
+"brew:davidnussio/tap/ingombro-cli" = "latest"

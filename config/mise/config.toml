@@ -10,6 +10,7 @@ maven = "latest"
 "github:davidnussio/envsec" = "latest"
 supabase = "latest"
 tflint = "latest"
+pnpm = "10.34.7"
 
 [settings]
 verbose = false
