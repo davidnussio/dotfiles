@@ -5,9 +5,12 @@ Everything is read live from the repository, so the browser never drifts
 from the config:
 
   Cheatsheet  sections and tables of cheatsheet.md
-  Fish        abbreviations, aliases and functions in config/fish
-  Packages    [bootstrap.packages] in mise.toml and [tools] in config/mise
+  Fish        abbreviations, aliases, functions and key bindings in config/fish
+  Git         [alias] section of git/.gitconfig
+  Zellij      keymap.kdl with the config.kdl overrides applied, by mode, and layouts
+  Packages   [bootstrap.packages] in mise.toml and [tools] in config/mise
   Dotfiles    [dotfiles] links in mise.toml, with a preview of each source
+  macOS       text keys in macos/DefaultKeyBinding.dict
   Docs        sections of README.md
 
 Usage:
@@ -38,6 +41,9 @@ ICONS = {
     "dir": "",
     "cheatsheet": "",
     "fish": "",
+    "git": "\ue702",
+    "zellij": "\uf489",
+    "macos": "\uf179",
     "packages": "",
     "dotfiles": "",
     "docs": "",
@@ -149,6 +155,11 @@ def first_code(text):
 
 def looks_like_keys(text):
     return bool(re.match(r"^(Ctrl|Alt|Cmd|Shift|Super|Tab|Esc|F\d)\b", text or ""))
+
+
+def spaced(name):
+    """CamelCase → 'Camel case'."""
+    return re.sub(r"(?<=[a-z])(?=[A-Z])", " ", name).capitalize()
 
 
 def table_cmd(headers, cells):
@@ -278,6 +289,47 @@ def parse_function(rest):
     return name, desc
 
 
+FISH_BLOCK_RE = re.compile(r"^\s*(if|for|while|function|switch|begin)\b")
+FISH_CSI_MODS = {"2": "Shift", "3": "Alt", "4": "Shift+Alt", "5": "Ctrl"}
+FISH_CSI_KEYS = {"A": "Up", "B": "Down", "C": "Right", "D": "Left", "~": "Delete"}
+
+
+def fish_key(seq):
+    """A `bind` sequence as printed on the keyboard, e.g. Alt+Up."""
+    seq = seq.replace("\\[", "[").replace("\\;", ";")
+    if seq == "\\t":
+        return "Tab"
+    csi = re.fullmatch(r"\\e\[\d+;(\d)([A-D~])", seq)
+    if csi:
+        return f"{FISH_CSI_MODS.get(csi.group(1), '?')}+{FISH_CSI_KEYS[csi.group(2)]}"
+    ctrl = re.fullmatch(r"\\c(.)", seq)
+    if ctrl:
+        return f"Ctrl+{ctrl.group(1).upper()}"
+    alt = re.fullmatch(r"\\e(.)", seq)
+    if alt:
+        ch = alt.group(1)
+        return f"Alt+Shift+{ch}" if ch.isupper() else f"Alt+{ch.upper()}"
+    return seq
+
+
+def fish_binds(lines):
+    """Yield (lineno, key, command) for binds that are active by default."""
+    blocks = []  # True while inside a block that does not run by default
+    for no, line in enumerate(lines, 1):
+        if FISH_BLOCK_RE.match(line):
+            blocks.append(bool(re.match(r"^\s*if set -q ", line)))  # opt-in by env var
+        elif re.match(r"^\s*else\b", line) and blocks:
+            blocks[-1] = True
+        elif re.match(r"^\s*end\b", line) and blocks:
+            blocks.pop()
+        m = re.match(r"^\s*bind\s+(.*)$", line)
+        if not m or any(blocks) or "$" in m.group(1) or m.group(1).startswith("--"):
+            continue  # variable sequences and --erase are plugin plumbing
+        words = re.sub(r"^-M\s+\S+\s+", "", m.group(1)).split(None, 1)
+        if len(words) == 2:
+            yield no, fish_key(words[0]), words[1].strip("'\"")
+
+
 def fish_files(base):
     files = [base / "config.fish"]
     files += sorted((base / "conf.d").glob("*.fish"))
@@ -286,15 +338,23 @@ def fish_files(base):
 
 
 def load_fish(base):
-    root = folder("Fish", "fish", "abbreviations, aliases, functions")
+    root = folder("Fish", "fish", "abbreviations, aliases, functions, key bindings")
     abbrs = root.add(folder("Abbreviations", desc="type it, then space to expand"))
     aliases = root.add(folder("Aliases"))
     funcs = root.add(folder("Functions"))
+    binds = root.add(folder("Keybindings"))
     seen = set()
     for f in fish_files(base):
         if f.name.startswith("_"):
             continue
         lines = f.read_text(errors="replace").splitlines()
+        for no, key, cmd in fish_binds(lines):
+            if ("bind", key) not in seen:
+                seen.add(("bind", key))
+                what = cmd.lstrip("_").replace("_", " ")
+                binds.add(Node(key, kind="key", desc=what, source=(f, no),
+                               fields=[("Keys", f"`{key}`"), ("Runs", f"`{cmd}`"),
+                                       ("Defined in", f"{tilde(f)}:{no}")]))
         for no, line in enumerate(lines, 1):
             m = re.match(r"^\s*(abbr|alias|function)\s+(.*)$", line)
             if not m:
@@ -336,6 +396,197 @@ def load_fish(base):
                                                       ("Defined in", f"{rel}:{no}")]))
     for group in (abbrs, aliases, funcs):
         group.children.sort(key=lambda n: n.name.lower())
+    return root
+
+
+def load_git(path):
+    root = folder("Git", "git", "aliases from .gitconfig")
+    if not path.exists():
+        return root
+    section = None
+    for no, line in enumerate(path.read_text().splitlines(), 1):
+        header = re.match(r"^\[(\w+)", line)
+        if header:
+            section = header.group(1)
+            continue
+        m = re.match(r"^\s+([\w-]+)\s*=\s*(.+)$", line) if section == "alias" else None
+        if m:
+            name, value = m.group(1), m.group(2).strip('"').lstrip("!").strip('"')
+            root.add(Node(name, kind="cmd", desc=value, cmd=f"git {name}", source=(path, no),
+                          fields=[("Alias", f"`git {name}`"), ("Runs", f"`{value}`"),
+                                  ("Defined in", f"{tilde(path)}:{no}")]))
+    root.children.sort(key=lambda n: n.name.lower())
+    return root
+
+
+def load_macos(path):
+    root = folder("macOS", "macos", "text keys in Cocoa apps")
+    if not path.exists():
+        return root
+    for no, line in enumerate(path.read_text().splitlines(), 1):
+        m = re.match(r'^\s*"[^"]+"\s*=\s*(\w+):;\s*//\s*(.+)$', line)
+        if m:
+            key, desc = m.group(2).title().replace("-", "+"), spaced(m.group(1))
+            root.add(Node(key, kind="key", desc=desc, source=(path, no),
+                          fields=[("Keys", f"`{key}`"), ("Action", desc),
+                                  ("Defined in", f"{tilde(path)}:{no}")]))
+    return root
+
+
+KDL_TOKEN_RE = re.compile(r'//[^\n]*|\w+="[^"]*"|"(?:\\.|[^"\\])*"|[{};\n]|[^\s{};"]+')
+KDL_PROP_RE = re.compile(r'^(\w+)="(.*)"$')
+
+ZELLIJ_MODES = {
+    "entersearch": "Enter search",
+    "renametab": "Rename tab",
+    "renamepane": "Rename pane",
+    "renamesession": "Rename session",
+}
+
+
+class KdlNode:
+    def __init__(self, name, line):
+        self.name = name
+        self.line = line
+        self.args = []
+        self.children = []
+
+
+def kdl_text(token):
+    return re.sub(r"\\(.)", r"\1", token[1:-1]) if token.startswith('"') else token
+
+
+def parse_kdl(text):
+    """Just enough KDL for zellij configs: nodes, arguments, properties, blocks."""
+    root, node, line = [], None, 1
+    stack = [root]
+    for token in KDL_TOKEN_RE.findall(text):
+        if token.startswith("//"):
+            continue
+        if token in ("\n", ";"):
+            line += token == "\n"
+            node = None
+        elif token == "{":
+            stack.append(node.children)
+            node = None
+        elif token == "}":
+            stack.pop()
+            node = None
+        elif node is None:
+            node = KdlNode(kdl_text(token), line)
+            stack[-1].append(node)
+        else:
+            node.args.append(kdl_text(token))
+    return root
+
+
+def kdl_walk(nodes):
+    for node in nodes:
+        yield node
+        yield from kdl_walk(node.children)
+
+
+def zellij_mode(name):
+    return ZELLIJ_MODES.get(name.lower(), name.title())
+
+
+def zellij_action(node):
+    if node.name == "SwitchToMode":
+        return f"Go to {zellij_mode(node.args[0])} mode"
+    if node.name == "LaunchOrFocusPlugin":
+        return f"Open {Path(node.args[0].rpartition(':')[2]).stem} plugin"
+    return " ".join([spaced(node.name)] + [a.lower() for a in node.args])
+
+
+def zellij_bind(bind, path, keys_vars):
+    """A bind node → (keys, actions, source)."""
+    keys, where = [], ""
+    for arg in bind.args:
+        prop = KDL_PROP_RE.match(arg)
+        if prop:
+            where = f" on {prop.group(2)}"
+        else:
+            keys.append(re.sub(r"\{(\w+)\}", lambda m: keys_vars.get(m.group(1), m.group(0)), arg))
+    return [k + where for k in keys], bind.children, (path, bind.line)
+
+
+def zellij_sections(path, sections):
+    """Layer a config file onto sections: a key bound or unbound here replaces earlier uses."""
+    if not path.exists():
+        return
+    nodes = parse_kdl(path.read_text())
+    keys_vars = {}
+    for preset in (n for n in nodes if n.name == "preset"):
+        for block in (c for c in preset.children if c.name == "defaults"):
+            keys_vars.update({c.name: c.args[0] for c in block.children if c.args})
+    for top in (n for n in nodes if n.name in ("keybinds", "mousebinds")):
+        for block in top.children:
+            entries = sections.setdefault((top.name, block.name, tuple(block.args)), [])
+            for bind in block.children:
+                if bind.name not in ("bind", "unbind"):
+                    continue
+                keys, actions, source = zellij_bind(bind, path, keys_vars)
+                for entry in entries:
+                    entry[0] = [k for k in entry[0] if k not in keys]
+                entries[:] = [e for e in entries if e[0]]
+                if bind.name == "bind":
+                    entries.append([keys, actions, source])
+
+
+def zellij_node(entry, mode):
+    keys, actions, (path, no) = entry
+    steps = [a for a in actions if not a.name.endswith("Input")]
+    then = None
+    if len(steps) > 1 and steps[-1].name == "SwitchToMode":
+        then = zellij_mode(steps[-1].args[0])
+        steps = steps[:-1]
+    desc = ", ".join(zellij_action(a) for a in steps)
+    fields = [("Keys", " · ".join(f"`{k}`" for k in keys)), ("Action", desc), ("Mode", mode)]
+    if then:
+        fields.append(("Then", f"back to {then}"))
+    fields.append(("Defined in", f"{tilde(path)}:{no}"))
+    return Node(" / ".join(keys), kind="key", desc=desc, fields=fields, source=(path, no))
+
+
+def load_zellij(base):
+    root = folder("Zellij", "zellij", "keybindings by mode, layouts")
+    sections = {}
+    zellij_sections(base / "keymap.kdl", sections)
+    zellij_sections(base / "config.kdl", sections)
+    keys = {k: v for k, v in sections.items() if k[0] == "keybinds"}
+    shared = {k: v for k, v in keys.items() if k[1].startswith("shared")}
+    ways_in = {}
+    for section in list(shared.values()) + list(keys.values()):
+        for entry in section:
+            for action in entry[1]:
+                if action.name == "SwitchToMode":
+                    ways_in.setdefault(action.args[0].lower(), " / ".join(entry[0]))
+    everywhere = root.add(folder("Everywhere", desc="active in every mode, except as noted"))
+    for (_, name, args), section in shared.items():
+        modes = ", ".join(zellij_mode(a) for a in args)
+        scope = f"all but {modes}" if name == "shared_except" else f"only {modes}"
+        for entry in section:
+            everywhere.add(zellij_node(entry, scope))
+    for (_, name, _), section in keys.items():
+        if section and not name.startswith("shared"):
+            title = zellij_mode(name)
+            how = ways_in.get(name.lower())
+            mode = root.add(folder(title, desc=f"reach with {how}" if how else ""))
+            for entry in section:
+                mode.add(zellij_node(entry, f"Zellij {title}"))
+    mouse = root.add(folder("Mouse"))
+    for key, section in sections.items():
+        if key[0] == "mousebinds":
+            for entry in section:
+                mouse.add(zellij_node(entry, "Mouse"))
+    layouts = root.add(folder("Layouts", desc="zellij --layout <name>"))
+    for path in sorted((base / "layouts").glob("*.kdl")):
+        tabs = [m.group(2) for n in kdl_walk(parse_kdl(path.read_text())) if n.name == "tab"
+                for m in map(KDL_PROP_RE.match, n.args) if m and m.group(1) == "name"]
+        desc = ", ".join(tabs)
+        layouts.add(Node(path.stem, kind="cmd", desc=desc, cmd=f"zellij --layout {path.stem}",
+                         preview=path, source=(path, 1),
+                         fields=[("Layout", f"`{path.stem}`"), ("Tabs", desc or "—")]))
     return root
 
 
@@ -440,8 +691,11 @@ def build_tree():
     root = folder("dothelp")
     root.add(load_cheatsheet(REPO / "cheatsheet.md"))
     root.add(load_fish(REPO / "config" / "fish"))
+    root.add(load_git(REPO / "git" / ".gitconfig"))
+    root.add(load_zellij(REPO / "config" / "zellij"))
     root.add(load_packages(REPO / "mise.toml", REPO / "config" / "mise" / "config.toml"))
     root.add(load_dotfiles(REPO / "mise.toml"))
+    root.add(load_macos(REPO / "macos" / "DefaultKeyBinding.dict"))
     root.add(load_docs(REPO / "README.md"))
     return root
 

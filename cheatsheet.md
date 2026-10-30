@@ -36,7 +36,7 @@
 | `playground` | `cd ~/Developer/playground && code .` | Jump to playground |
 | `zdev` | `zellij --layout dev` | Open the dev workspace in the current directory |
 | `za <name>` | `zellij attach --create <name>` | Attach to or create a session |
-| `dothelp [query]` | `bin/dothelp` | Yazi-style browser for this cheatsheet, fish, packages and dotfiles |
+| `dothelp [query]` | `bin/dothelp` | Yazi-style browser for this cheatsheet, fish, git aliases, zellij keys and layouts, packages, dotfiles and macOS keys |
 
 ### File System
 
@@ -97,7 +97,7 @@
 ### Zellij
 
 Start the workspace with `zdev`. It opens dedicated tabs for Neovim, OpenCode,
-runtime shells, and lazygit using the compact Ayu Mirage interface.
+runtime shells, and lazygit using the compact Nord interface.
 
 | Keybinding | Action |
 | :--- | :--- |
