@@ -7,7 +7,6 @@ uv = "latest"
 "npm:@zvec/zvec-grep" = "latest"
 maven = "latest"
 # Homebrew taps without API metadata need Ruby 3 to evaluate, so these come from mise
-"github:davidnussio/envsec" = "latest"
 supabase = "latest"
 tflint = "latest"
 pnpm = "10.34.7"
@@ -19,3 +18,8 @@ lockfile = true
 lockfile_platforms = ["macos-arm64", "macos-x64", "linux-x64"]
 minimum_release_age = "1d"
 # idiomatic_version_file_enable_tools = ["node"]
+
+# gh keeps its token in the macOS keychain, where mise can't read it: without
+# this, GitHub calls (taps, github: tools) are unauthenticated and hit 60/hour.
+[settings.github]
+credential_command = 'gh auth token --hostname "$MISE_CREDENTIAL_HOST"'
