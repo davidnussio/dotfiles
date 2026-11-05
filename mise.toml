@@ -89,7 +89,7 @@ value = false
 
 # ─── Setup the declarative parts do not cover (runs on every bootstrap) ──────
 [tasks.bootstrap]
-description = "Git identity, Screenshots folder, visible ~/Library"
+description = "Git identity, Screenshots folder, visible ~/Library, login items"
 run = [
   "git config -f ~/.gitconfig.local user.name '{{ vars.git_name }}'",
   "[ -z '{{ vars.git_email }}' ] || git config -f ~/.gitconfig.local user.email '{{ vars.git_email }}'",
@@ -98,6 +98,8 @@ run = [
   "mkdir -p ~/Screenshots",
   "defaults write com.apple.screencapture location ~/Screenshots",
   "chflags nohidden ~/Library",
+  # Login items (skipped when the app is missing or already listed)
+  "[ ! -d /Applications/JustHide.app ] || osascript -e 'tell application \"System Events\" to get name of every login item' | grep -q JustHide || osascript -e 'tell application \"System Events\" to make login item at end with properties {path:\"/Applications/JustHide.app\", hidden:false}'",
 ]
 
 # ─── Packages (Homebrew formulae and casks, installed by mise) ───────────────
@@ -112,7 +114,7 @@ run = [
 "brew-cask:zoom" = "latest" # Video conferencing
 "brew-cask:dbeaver-community" = "latest" # Database management tool
 "brew-cask:mongodb-compass" = "latest" # MongoDB GUI
-"brew-cask:jordanbaird-ice" = "latest" # Menu bar manager
+"brew-cask:benjustjammin/tap/justhide" = "latest" # Menu bar icon hider (macOS 27)
 "brew-cask:discord" = "latest" # Chat app
 "brew-cask:omnissa-horizon-client" = "latest" # VDI client
 "brew-cask:notunes" = "latest" # Prevent iTunes from opening
