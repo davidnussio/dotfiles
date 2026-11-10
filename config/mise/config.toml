@@ -2,14 +2,14 @@
 java = "27"
 bun = "latest"
 node = "26"
-python = "3.14"
+python = "3.15"
 uv = "latest"
 "npm:@zvec/zvec-grep" = "latest"
 maven = "latest"
 # Homebrew taps without API metadata need Ruby 3 to evaluate, so these come from mise
 supabase = "latest"
 tflint = "latest"
-pnpm = "10.34.7"
+pnpm = "12.18.0"
 
 [settings]
 verbose = false
