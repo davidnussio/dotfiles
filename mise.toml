@@ -218,7 +218,6 @@ run = [
 "brew:hyperfine" = "latest" # benchmarking comandi shell
 "brew:viddy" = "latest" # watch moderno con diff
 "brew:topgrade" = "latest" # aggiorna package manager e toolchain
-"brew:atuin" = "latest" # shell history contestuale
 "brew:direnv" = "latest" # environment per-directory
 "brew:just" = "latest" # project command runner
 "brew:watchexec" = "latest" # rilancia comandi al cambiare dei file
