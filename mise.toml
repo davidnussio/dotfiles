@@ -267,6 +267,7 @@ run = [
 "brew:davidnussio/tap/ingombro-cli" = "latest"
 "brew-cask:davidnussio/tap/ingombro" = "latest"
 "brew:davidnussio/tap/envsec" = "latest"
+"brew:davidnussio/tap/lazyjq" = "latest"
 "brew:bash" = "latest"
 "brew:dnscontrol" = "latest"
 "brew:htop" = "latest"
