@@ -131,6 +131,22 @@ run = [
 "brew-cask:visual-studio-code" = "latest" # Code editor
 "brew-cask:obsidian" = "latest" # Note-taking app
 "brew-cask:claude-code@latest" = "latest"
+# Installed before mise, adopted into the config
+"brew-cask:android-platform-tools" = "latest" # adb, fastboot
+"brew-cask:android-studio" = "latest" # Android IDE
+"brew-cask:antigravity" = "latest" # Google AI IDE
+"brew-cask:arduino-ide" = "latest" # Arduino IDE
+"brew-cask:capcut" = "latest" # Video editor
+"brew-cask:gcloud-cli" = "latest" # Google Cloud CLI
+"brew-cask:k6-studio" = "latest" # Load test recorder
+"brew-cask:karabiner-elements" = "latest" # Keyboard remapper
+"brew-cask:kodi" = "latest" # Media center
+"brew-cask:microsoft-auto-update" = "latest" # Updater for Microsoft apps
+"brew-cask:mitmproxy" = "latest" # HTTP(S) intercepting proxy
+"brew-cask:ngrok" = "latest" # Local tunnels
+"brew-cask:notion" = "latest" # Notes and docs
+"brew-cask:obs" = "latest" # Screen recording and streaming
+"brew-cask:wireshark-app" = "latest" # Packet analyzer
 
 # Fonts
 "brew-cask:font-fira-code" = "latest"
@@ -138,6 +154,7 @@ run = [
 "brew-cask:font-jetbrains-mono" = "latest"
 "brew-cask:font-recursive-code" = "latest"
 "brew-cask:font-monaspace" = "latest"
+"brew-cask:font-fira-code-nerd-font" = "latest"
 
 # Command-line tools
 "brew:git" = "latest" # Version control
@@ -251,3 +268,9 @@ run = [
 "brew:davidnussio/tap/ingombro-cli" = "latest"
 "brew-cask:davidnussio/tap/ingombro" = "latest"
 "brew:davidnussio/tap/envsec" = "latest"
+"brew:bash" = "latest"
+"brew:dnscontrol" = "latest"
+"brew:htop" = "latest"
+
+[bootstrap.brew.taps]
+"davidnussio/tap" = "https://github.com/davidnussio/homebrew-tap.git"
