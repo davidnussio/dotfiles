@@ -270,6 +270,7 @@ run = [
 "brew:bash" = "latest"
 "brew:dnscontrol" = "latest"
 "brew:htop" = "latest"
+"brew:cloudflared" = "latest"
 
 [bootstrap.brew.taps]
 "davidnussio/tap" = "https://github.com/davidnussio/homebrew-tap.git"
