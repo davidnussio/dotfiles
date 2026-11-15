@@ -41,6 +41,8 @@ prompt = "GitHub user"
 "~/.npmrc/min-release-age" = { line = "min-release-age=1" }
 "~/.bunfig.toml/cooldown" = { source = "supply-chain/bunfig.toml", merge = true }
 "~/.config/uv/uv.toml/cooldown" = { source = "supply-chain/uv.toml", merge = true }
+"~/Library/Preferences/pnpm/config.yaml/cooldown" = { line = "minimumReleaseAge: 1440" } # minutes
+"~/.config/pip/pip.conf" = "supply-chain/pip.conf"
 
 # ─── Shell ───────────────────────────────────────────────────────────────────
 # The activation block already lives in config/fish/config.fish
@@ -272,6 +274,7 @@ run = [
 "brew:dnscontrol" = "latest"
 "brew:htop" = "latest"
 "brew:cloudflared" = "latest"
+"brew-cask:blender" = "latest"
 
 [bootstrap.brew.taps]
 "davidnussio/tap" = "https://github.com/davidnussio/homebrew-tap.git"
