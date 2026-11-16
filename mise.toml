@@ -145,7 +145,6 @@ run = [
 "brew-cask:kodi" = "latest" # Media center
 "brew-cask:microsoft-auto-update" = "latest" # Updater for Microsoft apps
 "brew-cask:mitmproxy" = "latest" # HTTP(S) intercepting proxy
-"brew-cask:ngrok" = "latest" # Local tunnels
 "brew-cask:notion" = "latest" # Notes and docs
 "brew-cask:obs" = "latest" # Screen recording and streaming
 "brew-cask:wireshark-app" = "latest" # Packet analyzer
