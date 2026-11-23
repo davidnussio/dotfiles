@@ -100,6 +100,8 @@ run = [
   "mkdir -p ~/Screenshots",
   "defaults write com.apple.screencapture location ~/Screenshots",
   "chflags nohidden ~/Library",
+  # Report Homebrew/mise.toml/PATH divergences (warnings only, never fails)
+  "'{{ config_root }}/bin/pkg' doctor || true",
   # Login items (skipped when the app is missing or already listed)
   "[ ! -d /Applications/JustHide.app ] || osascript -e 'tell application \"System Events\" to get name of every login item' | grep -q JustHide || osascript -e 'tell application \"System Events\" to make login item at end with properties {path:\"/Applications/JustHide.app\", hidden:false}'",
 ]
@@ -138,7 +140,6 @@ run = [
 "brew-cask:android-studio" = "latest" # Android IDE
 "brew-cask:antigravity" = "latest" # Google AI IDE
 "brew-cask:arduino-ide" = "latest" # Arduino IDE
-"brew-cask:capcut" = "latest" # Video editor
 "brew-cask:gcloud-cli" = "latest" # Google Cloud CLI
 "brew-cask:k6-studio" = "latest" # Load test recorder
 "brew-cask:karabiner-elements" = "latest" # Keyboard remapper
@@ -274,6 +275,10 @@ run = [
 "brew:htop" = "latest"
 "brew:cloudflared" = "latest"
 "brew-cask:blender" = "latest"
+"brew-cask:davidnussio/tap/granello" = "latest" # Meeting notepad with local transcription and AI notes
+"brew:cmake" = "latest" # Cross-platform make
+"brew:git-lfs" = "latest" # Git extension for versioning large files
+"brew:rust" = "latest" # Safe, concurrent, practical language
 
 [bootstrap.brew.taps]
 "davidnussio/tap" = "https://github.com/davidnussio/homebrew-tap.git"

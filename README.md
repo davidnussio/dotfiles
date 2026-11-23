@@ -56,6 +56,20 @@ mise bootstrap packages upgrade                  # upgrade declared packages (al
 mise bootstrap packages prune --dry-run          # formulae no config declares
 ```
 
+Day to day, `pkg` keeps Homebrew and `mise.toml` in step, so nothing is
+installed without being declared (or the other way round):
+
+```bash
+pkg try <name>     # brew install only: try an app before keeping it
+pkg add <name>     # declare something already installed (with brew's description)
+pkg rm <name>      # remove from mise.toml and uninstall, in one go
+pkg sync           # fzf over every divergence: add, uninstall, ignore, install
+pkg doctor         # divergences, half-installed formulae, commands shadowed in PATH
+```
+
+`pkg doctor` also runs at the end of `mise bootstrap`. Packages kept out of
+`mise.toml` on purpose go in `packages.ignore`.
+
 ---
 
 ## 🗂 What's Inside
@@ -65,7 +79,9 @@ dotfiles/
 ├── mise.toml                   # mise bootstrap: packages, dotfiles, macOS defaults, shell
 ├── macos/                      # Files copied into ~/Library
 ├── supply-chain/               # 1-day release cooldown for npm, pnpm, bun, uv and pip
+├── packages.ignore             # Installed on purpose, kept out of mise.toml
 ├── bin/dothelp                 # Yazi-style browser for these docs (`dothelp`, Alt+/)
+├── bin/pkg                     # Homebrew ↔ mise.toml sync (`pkg try|add|rm|sync|doctor`)
 ├── git/
 │   ├── .gitconfig              # Git config with delta, aliases, signing
 │   └── .gitignore_global       # Global gitignore

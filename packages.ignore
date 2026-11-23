@@ -1,0 +1,4 @@
+# Packages installed on purpose but kept out of mise.toml: `pkg sync` and
+# `pkg doctor` do not list them. One `brew:name` or `brew-cask:name` per line
+# (Ctrl-X in `pkg sync` appends here).
+brew-cask:miniconda

@@ -1,0 +1,480 @@
+#!/usr/bin/env python3
+"""pkg — keep Homebrew and [bootstrap.packages] in mise.toml in step.
+
+mise.toml is the list of what this machine should have. pkg changes the
+list and Homebrew together, so nothing is installed without being declared
+or declared without being installed.
+
+Usage:
+  pkg try <name>…     brew install, without touching mise.toml (try it first)
+  pkg add <name>…     declare installed packages in mise.toml
+  pkg rm <name>…      remove from mise.toml and uninstall from Homebrew
+  pkg sync            pick, with fzf, what to do with every divergence
+  pkg doctor [--fix]  report divergences and commands missing from PATH
+                      (--fix deletes the locks mise leaves in Cellar)
+
+Packages left out on purpose go in packages.ignore (one `brew:name` or
+`brew-cask:name` per line), so sync and doctor stop listing them.
+"""
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+MISE_TOML = ROOT / "mise.toml"
+IGNORE = ROOT / "packages.ignore"
+BREW_PREFIX = Path(os.environ.get("HOMEBREW_PREFIX", "/opt/homebrew"))
+MISE_DATA = Path(os.environ.get("MISE_DATA_DIR", Path.home() / ".local/share/mise"))
+
+BOLD, DIM, RED, YELLOW, GREEN, RESET = (
+    ("\033[1m", "\033[2m", "\033[31m", "\033[33m", "\033[32m", "\033[0m")
+    if sys.stdout.isatty()
+    else ("",) * 6
+)
+
+
+def run(cmd, check=True, capture=True):
+    r = subprocess.run(cmd, text=True, capture_output=capture, cwd=ROOT,
+                       stdin=subprocess.DEVNULL if capture else None)
+    if check and r.returncode != 0:
+        sys.exit(f"pkg: {' '.join(cmd)} failed\n{r.stderr if capture else ''}")
+    return r
+
+
+# ─── State ───────────────────────────────────────────────────────────────────
+
+
+def declared():
+    """{(manager, package): state} from every config mise reads here."""
+    out = json.loads(run(["mise", "bootstrap", "packages", "status", "--json"]).stdout)
+    return {
+        (mgr, p["package"]): p["state"]
+        for mgr in ("brew", "brew-cask")
+        for p in out.get(mgr, {}).get("packages", [])
+        if p.get("desired_state", "present") == "present"
+    }
+
+
+def installed():
+    """Installed formulae and casks, each with every name it answers to."""
+    info = json.loads(run(["brew", "info", "--json=v2", "--installed"]).stdout)
+    leaves = set(run(["brew", "leaves", "--installed-on-request"]).stdout.split())
+    pkgs = []
+    for f in info["formulae"]:
+        core = f["tap"] == "homebrew/core"
+        pkgs.append({
+            "mgr": "brew",
+            "id": f["name"] if core else f["full_name"],
+            "names": {f["name"], f["full_name"], *f["aliases"], *f["oldnames"]},
+            "desc": f.get("desc") or "",
+            "leaf": f["name"] in leaves or f["full_name"] in leaves,
+            "keg_only": f["keg_only"],
+            "linked": f["linked_keg"] is not None,
+        })
+    for c in info["casks"]:
+        core = c["tap"] == "homebrew/cask"
+        pkgs.append({
+            "mgr": "brew-cask",
+            "id": c["token"] if core else c["full_token"],
+            "names": {c["token"], c["full_token"], *c.get("old_tokens", [])},
+            "desc": c.get("desc") or ", ".join(c.get("name", [])),
+            "leaf": True,
+        })
+    return pkgs
+
+
+def ignored():
+    if not IGNORE.exists():
+        return set()
+    return {
+        line.split("#")[0].strip()
+        for line in IGNORE.read_text().splitlines()
+        if line.split("#")[0].strip()
+    }
+
+
+def undeclared(decl, pkgs):
+    names = {(m, p) for m, p in decl}
+    skip = ignored()
+    return [
+        p for p in pkgs
+        if p["leaf"]
+        and not any((p["mgr"], n) in names for n in p["names"])
+        and f"{p['mgr']}:{p['id']}" not in skip
+    ]
+
+
+def missing(decl):
+    return sorted(f"{m}:{p}" for (m, p), state in decl.items() if state == "missing")
+
+
+def unreadable(decl):
+    """Declared packages whose state mise could not work out."""
+    return sorted(f"{m}:{p}" for (m, p), state in decl.items() if state == "error")
+
+
+# ─── Actions ─────────────────────────────────────────────────────────────────
+
+
+def find(name, pkgs):
+    """Resolve `name`, `brew:name` or `brew-cask:name` to an installed package."""
+    mgr, _, bare = name.rpartition(":")
+    hits = [p for p in pkgs if bare in p["names"] and mgr in ("", p["mgr"])]
+    if len(hits) > 1:
+        sys.exit(f"pkg: {bare} is both a formula and a cask, write brew:{bare} or brew-cask:{bare}")
+    return hits[0] if hits else None
+
+
+def add(entries):
+    """entries: list of (manager:package, description)."""
+    if not entries:
+        return
+    keys = [e for e, _ in entries]
+    run(["mise", "bootstrap", "packages", "use", "--no-install", "--yes",
+         "--path", str(MISE_TOML), *keys])
+    text = MISE_TOML.read_text()
+    for key, desc in entries:
+        if desc:
+            text = re.sub(
+                rf'^("{re.escape(key)}" = "[^"]*")$',
+                lambda m: f"{m.group(1)} # {desc}",
+                text, count=1, flags=re.M,
+            )
+        print(f"{GREEN}+{RESET} {key}")
+    MISE_TOML.write_text(text)
+
+
+def undeclare(key):
+    """Remove `key` from mise.toml; True if a line was removed."""
+    text = MISE_TOML.read_text()
+    new, n = re.subn(rf'^"{re.escape(key)}"\s*=.*\n', "", text, flags=re.M)
+    if n:
+        MISE_TOML.write_text(new)
+        print(f"{RED}-{RESET} {key} (mise.toml)")
+    return bool(n)
+
+
+def mise_busy():
+    """True while mise is installing: its staging locks are then in use."""
+    r = subprocess.run(["pgrep", "-f", r"mise (bootstrap|install|upgrade|use)"],
+                       capture_output=True)
+    return r.returncode == 0
+
+
+def stale_locks():
+    """.mise-staging.lock files mise left in Cellar/<name> after installing."""
+    if mise_busy():
+        return []
+    return sorted((BREW_PREFIX / "Cellar").glob("*/.mise-staging.lock"))
+
+
+def clean_locks(locks):
+    """Delete stale locks; drop Cellar/<name> dirs left empty. Returns those names."""
+    emptied = []
+    for lock in locks:
+        lock.unlink(missing_ok=True)
+        try:
+            lock.parent.rmdir()  # only succeeds when nothing else is in it
+            emptied.append(lock.parent.name)
+        except OSError:
+            pass
+    return emptied
+
+
+def uninstall(mgr, name):
+    cmd = ["brew", "uninstall", *(["--cask"] if mgr == "brew-cask" else []), name]
+    r = run(cmd, check=False, capture=False)
+    if mgr == "brew":
+        # mise's leftover lock would keep Cellar/<name> alive and brew would
+        # report the formula as still installed ("brew uninstall --force")
+        short = name.rpartition("/")[2]
+        clean_locks([l for l in stale_locks() if l.parent.name == short])
+    return r.returncode == 0
+
+
+def install(mgr, name):
+    cmd = ["brew", "install", *(["--cask"] if mgr == "brew-cask" else []), name]
+    return run(cmd, check=False, capture=False).returncode == 0
+
+
+def ignore(key):
+    with IGNORE.open("a") as f:
+        f.write(f"{key}\n")
+    print(f"{DIM}~ {key} (packages.ignore){RESET}")
+
+
+def confirm(question):
+    try:
+        with open("/dev/tty") as tty:
+            print(f"{question} [y/N] ", end="", flush=True)
+            return tty.readline().strip().lower() in ("y", "yes", "s", "si", "sì")
+    except OSError:
+        return False
+
+
+# ─── Commands ────────────────────────────────────────────────────────────────
+
+
+def cmd_try(args):
+    if not args:
+        sys.exit("usage: pkg try <name>…")
+    r = run(["brew", "install", *args], check=False, capture=False)
+    if r.returncode == 0:
+        names = " ".join(a for a in args if not a.startswith("-"))
+        print(f"\n{DIM}Not in mise.toml yet. Keep it: pkg add {names}"
+              f" · drop it: pkg rm {names} · or decide later in pkg sync{RESET}")
+    return r.returncode
+
+
+def cmd_add(args):
+    if not args:
+        sys.exit("usage: pkg add <name>…")
+    pkgs, decl, entries = installed(), declared(), []
+    for a in args:
+        p = find(a, pkgs)
+        if not p:
+            sys.exit(f"pkg: {a} is not installed (pkg try {a.rpartition(':')[2]} first)")
+        if any((p["mgr"], n) in decl for n in p["names"]):
+            print(f"{DIM}= {p['mgr']}:{p['id']} already declared{RESET}")
+            continue
+        entries.append((f"{p['mgr']}:{p['id']}", p["desc"]))
+    add(entries)
+    return 0
+
+
+def cmd_rm(args):
+    if not args:
+        sys.exit("usage: pkg rm <name>…")
+    pkgs, decl, rc = installed(), declared(), 0
+    for a in args:
+        p = find(a, pkgs)
+        if p:
+            mgr, names = p["mgr"], p["names"]
+        else:  # declared but not installed: just drop the entry
+            mgr, _, bare = a.rpartition(":")
+            names = {bare}
+        keys = [f"{m}:{n}" for (m, n) in decl if n in names and mgr in ("", m)]
+        removed = any([undeclare(k) for k in keys])
+        if keys and not removed:
+            print(f"{YELLOW}! {keys[0]} is declared in another config, not in {MISE_TOML}{RESET}")
+        if p and not uninstall(p["mgr"], p["id"]):
+            rc = 1
+        if not p and not keys:
+            print(f"{YELLOW}! {a}: neither installed nor declared{RESET}")
+            rc = 1
+    return rc
+
+
+def fzf(lines, header, keys):
+    """Multi-select with fzf; returns (key pressed, selected lines)."""
+    if not lines:
+        return None, []
+    r = subprocess.run(
+        ["fzf", "--multi", "--ansi", "--reverse", "--height=80%",
+         "--delimiter=\t", "--with-nth=1,2", "--tabstop=40",
+         f"--expect={','.join(keys)}", f"--header={header}",
+         "--bind=space:toggle+down,ctrl-a:toggle-all",
+         f"--preview={sys.executable} {Path(__file__).resolve()} _info {{1}}",
+         "--preview-window=right,50%,wrap"],
+        input="\n".join(lines), text=True, stdout=subprocess.PIPE,
+    )
+    if r.returncode != 0:  # Esc / Ctrl-C
+        return None, []
+    out = r.stdout.splitlines()
+    return out[0], [line.split("\t")[0] for line in out[1:]]
+
+
+def loading(msg="Reading Homebrew and mise.toml…"):
+    """One-line status on stderr while the slow calls run (cleared by fzf)."""
+    if sys.stderr.isatty():
+        print(f"{DIM}{msg}{RESET}", end="\r", file=sys.stderr, flush=True)
+
+
+def cmd_sync(_):
+    if not shutil.which("fzf"):
+        sys.exit("pkg: sync needs fzf")
+    changed = False
+    while True:
+        loading()
+        decl, pkgs = declared(), installed()
+        extra = {f"{p['mgr']}:{p['id']}": p for p in undeclared(decl, pkgs)}
+        gone = missing(decl)
+        if not extra and not gone:
+            print(f"{GREEN}✓ Homebrew and mise.toml agree{RESET}" + " " * 20)
+            return 0
+        lines = [f"{k}\t{GREEN}+ installed, not declared{RESET}  {DIM}{p['desc']}{RESET}"
+                 for k, p in sorted(extra.items())]
+        lines += [f"{k}\t{YELLOW}- declared, not installed{RESET}" for k in gone]
+        key, picked = fzf(
+            lines,
+            "Space select · Ctrl-A all · Esc quit — on the selection:\n"
+            "Enter   + add to mise.toml      - install\n"
+            "Ctrl-D  + uninstall             - remove from mise.toml\n"
+            "Ctrl-X  + ignore (packages.ignore)",
+            ["ctrl-d", "ctrl-x"],
+        )
+        if not picked:
+            if not changed:
+                print(f"{DIM}Nothing changed{RESET}")
+            return 0
+        changed = True
+        plus = [k for k in picked if k in extra]
+        minus = [k for k in picked if k not in extra]
+        if key == "ctrl-d":
+            if plus and confirm(f"Uninstall {', '.join(plus)}?"):
+                for k in plus:
+                    uninstall(extra[k]["mgr"], extra[k]["id"])
+            for k in minus:
+                if not undeclare(k):
+                    print(f"{YELLOW}! {k} is declared in another config{RESET}")
+        elif key == "ctrl-x":
+            for k in plus:
+                ignore(k)
+            for k in minus:
+                print(f"{DIM}~ {k}: declared packages cannot be ignored, use Ctrl-D{RESET}")
+        else:
+            add([(k, extra[k]["desc"]) for k in plus])
+            for k in minus:
+                mgr, _, name = k.partition(":")
+                install(mgr, name)
+
+
+def shell_path():
+    """PATH of an interactive fish after mise activation, as the user sees it."""
+    r = subprocess.run(
+        ["fish", "-il", "-c", "mise hook-env -s fish | source; string join : $PATH"],
+        text=True, capture_output=True, stdin=subprocess.DEVNULL,
+    )
+    lines = r.stdout.strip().splitlines()
+    return lines[-1] if r.returncode == 0 and lines else os.environ.get("PATH", "")
+
+
+def shadowed():
+    """Commands that mise provides but something else wins in PATH."""
+    shims = MISE_DATA / "shims"
+    if not shims.is_dir():
+        return []
+    path, out = shell_path(), []
+    for shim in sorted(shims.iterdir()):
+        found = shutil.which(shim.name, path=path)
+        # Compare the PATH entry, not the resolved file: shims link to mise itself
+        if found and not Path(found).parent.is_relative_to(MISE_DATA):
+            out.append(f"{shim.name} → {found}")
+    return out
+
+
+def cmd_doctor(args):
+    if "--fix" in args:
+        locks = stale_locks()
+        emptied = clean_locks(locks)
+        print(f"{GREEN}✓ removed {len(locks)} stale .mise-staging.lock"
+              f"{', and empty Cellar dirs: ' + ' '.join(emptied) if emptied else ''}{RESET}")
+    loading()
+    pkgs, decl = installed(), declared()
+    issues = []
+
+    def section(title, items, hint):
+        if items:
+            issues.append(title)
+            print(f"{BOLD}{YELLOW}! {title}{RESET} {DIM}({hint}){RESET}")
+            for i in items:
+                print(f"    {i}")
+
+    section("Installed, not in mise.toml",
+            [f"{p['mgr']}:{p['id']}" for p in undeclared(decl, pkgs)],
+            "pkg sync")
+    section("In mise.toml, not installed", missing(decl), "pkg sync")
+    section("In mise.toml, state unknown to mise", unreadable(decl),
+            "mise could not evaluate the definition: mise bootstrap packages status -v")
+
+    cellar = BREW_PREFIX / "Cellar"
+    section("Half-installed formulae (no version in Cellar)",
+            [d.name for d in sorted(cellar.iterdir())
+             if d.is_dir() and not any(v.is_dir() for v in d.iterdir())],
+            "pkg doctor --fix, then reinstall the ones still needed")
+    section("Stale .mise-staging.lock in Cellar (brew then asks for --force)",
+            [f"{len(stale_locks())} formulae"] if stale_locks() else [],
+            "pkg doctor --fix")
+    section("Dependencies missing", run(["brew", "missing"], check=False).stdout.split("\n")[:-1],
+            "brew install <dependency>")
+
+    declared_brew = {n for (m, n) in decl if m == "brew"}
+    section("Declared formulae not linked into PATH",
+            [p["id"] + (" (keg-only)" if p["keg_only"] else "")
+             for p in pkgs
+             if p["mgr"] == "brew" and p["names"] & declared_brew and not p["linked"]],
+            "brew link, or fish_add_path its opt/<name>/bin")
+
+    bindir = BREW_PREFIX / "bin"
+    section("Broken links in " + str(bindir),
+            [l.name for l in sorted(bindir.iterdir()) if l.is_symlink() and not l.exists()],
+            "brew cleanup --prune-prefix")
+
+    section("mise tools shadowed in PATH", shadowed(),
+            "activate_aggressive in config/mise/config.toml")
+
+    if not issues:
+        print(f"{GREEN}✓ Homebrew, mise.toml and PATH agree{RESET}")
+    return 1 if issues else 0
+
+
+def cmd_info(args):
+    """fzf preview: brew info for manager:name."""
+    mgr, _, name = args[0].partition(":")
+    flag = "--cask" if mgr == "brew-cask" else "--formula"
+    os.execvp("brew", ["brew", "info", flag, name])
+
+
+def declared_fast():
+    """{manager:package: comment} straight from mise.toml (no mise call)."""
+    out = {}
+    for line in MISE_TOML.read_text().splitlines():
+        m = re.match(r'^"(brew(?:-cask)?):([^"]+)"\s*=\s*"[^"]*"\s*(?:#\s*(.*))?$', line)
+        if m:
+            out[f"{m.group(1)}:{m.group(2)}"] = m.group(3) or ""
+    return out
+
+
+def cmd_complete(args):
+    """Candidates for fish: `name<TAB>description`, one per line."""
+    what = args[0] if args else ""
+    if what == "try":
+        for mgr, flag in (("formula", "--formulae"), ("cask", "--casks")):
+            r = subprocess.run(["brew", flag[2:]], text=True, capture_output=True)
+            for name in r.stdout.split():
+                print(f"{name}\t{mgr}")
+    elif what == "add":
+        decl = declared_fast()
+        names = {k.partition(":")[2] for k in decl}
+        skip = ignored()
+        for p in installed():
+            key = f"{p['mgr']}:{p['id']}"
+            if p["leaf"] and not p["names"] & names and key not in skip:
+                print(f"{p['id']}\t{p['desc'][:60] or p['mgr']}")
+    elif what == "rm":
+        for key, comment in sorted(declared_fast().items()):
+            mgr, _, name = key.partition(":")
+            print(f"{name}\t{comment[:60] or mgr}")
+    return 0
+
+
+COMMANDS = {
+    "try": cmd_try, "add": cmd_add, "rm": cmd_rm,
+    "sync": cmd_sync, "doctor": cmd_doctor, "_info": cmd_info,
+    "_complete": cmd_complete,
+}
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2 or sys.argv[1] not in COMMANDS:
+        print(__doc__.strip())
+        sys.exit(0 if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help") else 2)
+    try:
+        sys.exit(COMMANDS[sys.argv[1]](sys.argv[2:]))
+    except KeyboardInterrupt:
+        print(file=sys.stderr)
+        sys.exit(130)
