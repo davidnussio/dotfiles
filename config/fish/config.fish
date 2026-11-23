@@ -163,10 +163,6 @@ end
 
 
 
-# Added by OrbStack: command-line tools and integration
-# This won't be added again if you remove it.
-source ~/.orbstack/shell/init2.fish 2>/dev/null || :
-
 # Override: Tab su z mostra il DB zoxide come lista di candidati
 function __zoxide_z_complete
     set -l tokens (commandline --current-process --tokenize)

@@ -3,6 +3,7 @@ java = "27"
 bun = "latest"
 node = "26"
 python = "3.15"
+ruby = "latest" # mise bootstrap evaluates third-party tap casks with Ruby 3+
 uv = "latest"
 "npm:@zvec/zvec-grep" = "latest"
 maven = "latest"
@@ -13,6 +14,9 @@ pnpm = "12.18.0"
 
 [settings]
 verbose = false
+# Keep tool paths ahead of /opt/homebrew/bin, which config.fish puts first:
+# otherwise node/python pulled in as brew dependencies shadow the mise ones.
+activate_aggressive = true
 experimental = true
 lockfile = true
 lockfile_platforms = ["macos-arm64", "macos-x64", "linux-x64"]
