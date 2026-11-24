@@ -55,13 +55,6 @@ if status is-interactive
   abbr -a dotdot --position anywhere --regex '^\.\.\.+$' --function __dotdot_expand
   abbr -a o open
 
-  # Zellij: tutto passa da zj (config/fish/functions/zj.fish)
-  abbr -a zf 'zj finder'
-  abbr -a zterm 'zj term'
-  abbr -a zdev 'zj dev'
-  abbr -a zforensics 'zj macos-forensics'
-  abbr -a za 'zj -n'
-  abbr -a zattach 'zj'
   abbr -a e envsec
 
   abbr -a vi nvim
