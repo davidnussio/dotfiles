@@ -16,6 +16,16 @@ themes {
             emphasis_2 94 129 172
             emphasis_3 163 190 140
         }
+        // Tab in hover (e tab alternati nella compact-bar). Senza questo blocco
+        // Zellij usa come sfondo emphasis_1 (giallo) con il testo chiaro: illeggibile.
+        ribbon_hover {
+            base 236 239 244
+            background 76 86 106
+            emphasis_0 191 97 106
+            emphasis_1 235 203 139
+            emphasis_2 136 192 208
+            emphasis_3 180 142 173
+        }
         text_unselected {
             base 216 222 233
             background 46 52 64
