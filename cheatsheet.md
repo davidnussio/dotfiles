@@ -34,8 +34,9 @@
 | `efish` | `nvim ~/.config/fish/config.fish` | Edit fish config |
 | `e` | `envsec` | Manage env secrets |
 | `playground` | `cd ~/Developer/playground && code .` | Jump to playground |
-| `zdev` | `zellij --layout dev` | Open the dev workspace in the current directory |
-| `za <name>` | `zellij attach --create <name>` | Attach to or create a session |
+| `zj [layout]` | function | Open or resume the Zellij session named after the current directory (`<dir>` or `<dir>-<layout>`). Project `.zellij/<layout>.kdl` wins over global layouts. `-r` random name, `-n NAME` custom name, `-l` list layouts and sessions. Inside Zellij it adds the layout's tabs to the current session |
+| `zdev` / `zterm` / `zf` / `zforensics` | `zj dev` / `zj term` / `zj finder` / `zj macos-forensics` | Layout shortcuts |
+| `za <name>` | `zj -n <name>` | Attach to or create a named session |
 | `dothelp [query]` | `bin/dothelp` | Yazi-style browser for this cheatsheet, fish, git aliases, zellij keys and layouts, packages, dotfiles and macOS keys |
 
 ### File System
@@ -96,7 +97,7 @@
 
 ### Zellij
 
-Start the workspace with `zdev`. It opens dedicated tabs for Neovim, OpenCode,
+Start the workspace with `zj dev` (or `zdev`): one session per directory, resumed on the next run. It opens dedicated tabs for Neovim, OpenCode,
 runtime shells, and lazygit using the compact Nord interface.
 
 | Keybinding | Action |
