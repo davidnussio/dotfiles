@@ -6,7 +6,7 @@ function zj --description 'Zellij: una sessione per cartella, con layout opziona
         echo "Uso: zj [layout] [opzioni]"
         echo
         echo "  Fuori da Zellij apre (o riprende) la sessione della cartella corrente."
-        echo "  Nome sessione: <cartella> senza layout, <cartella>-<layout> con layout."
+        echo "  Nome sessione: la cartella. Il layout vale solo quando la sessione nasce."
         echo "  Dentro Zellij aggiunge i tab del layout alla sessione corrente."
         echo
         echo "  layout             .zellij/<layout>.kdl del progetto, altrimenti"
@@ -17,7 +17,7 @@ function zj --description 'Zellij: una sessione per cartella, con layout opziona
         echo
         echo "Esempi:"
         echo "  zj                 # sessione 'dotfiles' in ~/dotfiles"
-        echo "  zj dev             # sessione 'dotfiles-dev' con il layout dev"
+        echo "  zj dev             # sessione 'dotfiles', creata con il layout dev"
         echo "  zj dev -r          # layout dev, sessione con nome casuale"
         echo "  zj term -n scratch"
         return 0
@@ -87,16 +87,16 @@ function zj --description 'Zellij: una sessione per cartella, con layout opziona
     if test -z "$session"
         set session (path basename $PWD)
         test "$PWD" = "$HOME"; and set session home
-        test -n "$layout_name"; and set session $session-$layout_name
     end
     # Solo caratteri sicuri per i nomi di sessione
     set session (string replace -ra '[^A-Za-z0-9._-]+' '-' -- $session | string trim -c '-')
 
     # Sessione esistente (anche uscita): riprendila, altrimenti creala qui
     if contains -- $session (zellij list-sessions --short --no-formatting 2>/dev/null)
+        test -n "$layout"; and echo "zj: la sessione $session esiste già, il layout $layout_name non viene applicato" >&2
         zellij attach $session
     else if test -n "$layout"
-        zellij --session $session --layout $layout
+        zellij --session $session --new-session-with-layout $layout
     else
         zellij --session $session
     end

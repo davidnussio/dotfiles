@@ -34,7 +34,7 @@
 | `efish` | `nvim ~/.config/fish/config.fish` | Edit fish config |
 | `e` | `envsec` | Manage env secrets |
 | `playground` | `cd ~/Developer/playground && code .` | Jump to playground |
-| `zj [layout]` | function | Open or resume the Zellij session named after the current directory (`<dir>` or `<dir>-<layout>`). Project `.zellij/<layout>.kdl` wins over global layouts. `-r` random name, `-n NAME` custom name, `-l` list layouts and sessions. Inside Zellij it adds the layout's tabs to the current session |
+| `zj [layout]` | function | Open or resume the Zellij session named after the current directory; the layout applies only when the session is created. Project `.zellij/<layout>.kdl` wins over global layouts. `-r` random name, `-n NAME` custom name, `-l` list layouts and sessions. Inside Zellij it adds the layout's tabs to the current session |
 | `dothelp [query]` | `bin/dothelp` | Yazi-style browser for this cheatsheet, fish, git aliases, zellij keys and layouts, packages, dotfiles and macOS keys |
 
 ### File System
