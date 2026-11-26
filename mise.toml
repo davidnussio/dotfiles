@@ -279,6 +279,12 @@ run = [
 "brew:cmake" = "latest" # Cross-platform make
 "brew:git-lfs" = "latest" # Git extension for versioning large files
 "brew:rust" = "latest" # Safe, concurrent, practical language
+"brew-cask:kiro" = "latest" # Agent-centric IDE with spec-driven development
+"brew-cask:libreoffice" = "latest" # Free cross-platform office suite, fresh version
+"brew-cask:visualvm" = "latest" # All-in-One Java Troubleshooting Tool
+"brew:openbao" = "latest" # Provides a software solution to manage, store, and distribute sensitive data
+"brew:portless" = "latest" # Replace port numbers with stable, named local URLs for humans and agents
+"brew-cask:fork" = "latest" # Git client
 
 [bootstrap.brew.taps]
 "davidnussio/tap" = "https://github.com/davidnussio/homebrew-tap.git"
